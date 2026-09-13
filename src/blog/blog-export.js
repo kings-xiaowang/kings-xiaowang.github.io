@@ -257,7 +257,7 @@ const PawExport = (function () {
 ### 方法一：使用 \`username.github.io\` 仓库
 
 1. 在 GitHub 创建一个新仓库，命名为 **\`你的用户名.github.io\`**
-   - 例如你的用户名是 \`foxiepaws\`，就创建 \`foxiepaws.github.io\`
+   - 例如你的用户名是 \`kings-xiaowang\`，就创建 \`kingsxiaowang.github.io\`
 2. 把解压后的所有文件（index.html、src/ 目录、README.md 等）上传到仓库根目录
 3. 提交到 main 分支
 4. 等待 1-2 分钟，GitHub Pages 会自动部署

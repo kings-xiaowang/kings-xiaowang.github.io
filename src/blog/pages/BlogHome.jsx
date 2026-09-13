@@ -5,9 +5,12 @@ function BlogHomePage({ onNavigate, usingRemote }) {
   const [categories, setCategories] = React.useState([]);
   const [activeCategory, setActiveCategory] = React.useState('all');
   const [searchQuery, setSearchQuery] = React.useState('');
-  const [admin, setAdmin] = React.useState(null);
   const [loading, setLoading] = React.useState(true);
-  const [remoteBlogInfo, setRemoteBlogInfo] = React.useState(null);
+  // 博主信息使用硬编码配置，不被远程数据覆盖
+  const admin = getSiteAuthorPublic();
+  // 站点名称和副标题使用硬编码配置
+  const siteName = SITE_CONFIG.siteName;
+  const siteSubtitle = SITE_CONFIG.siteSubtitle;
 
   React.useEffect(() => {
     loadData();
@@ -21,19 +24,10 @@ function BlogHomePage({ onNavigate, usingRemote }) {
       if (usingRemote) {
         setPosts(PawRemote.getRemoteArticles(true));
         setCategories(PawRemote.getRemoteCategories());
-        const info = PawRemote.getRemoteBlogInfo();
-        setRemoteBlogInfo(info);
-        // 远程模式下，admin 信息从 blog 对象来
-        setAdmin({
-          nickname: info?.author || '小狐狸',
-          avatar: info?.avatar || 'preset:fox',
-          bio: info?.bio || '',
-        });
       } else {
         const allPosts = await PawDB.getArticles(true);
         setPosts(allPosts.sort((a, b) => b.createdAt - a.createdAt));
         setCategories(await PawDB.getCategories());
-        setAdmin(await PawDB.getAdminPublic());
       }
     } catch (e) {
       console.warn('[BlogHome] 加载失败:', e);
@@ -58,9 +52,6 @@ function BlogHomePage({ onNavigate, usingRemote }) {
     return list;
   }, [posts, activeCategory, searchQuery]);
 
-  const siteName = remoteBlogInfo?.title || 'kings小wang的个人博客';
-  const siteSubtitle = remoteBlogInfo?.subtitle || '记录生活与代码的毛茸茸角落';
-
   if (loading) {
     return (
       <div className="blog-page">
@@ -76,13 +67,13 @@ function BlogHomePage({ onNavigate, usingRemote }) {
     <div className="blog-page">
       <section className="blog-hero">
         <div className="blog-hero-avatar">
-          {blogGetAvatarEmoji(admin?.avatar)}
+          {blogGetAvatarEmoji(admin.avatar)}
         </div>
         <h1 className="blog-hero-title">{siteName}</h1>
         <p className="blog-hero-subtitle">{siteSubtitle}</p>
         <div className="blog-hero-author">
           <BlogPawIcon size={14} />
-          <span>{admin?.nickname || 'kings小wang'}</span>
+          <span>{admin.nickname}</span>
         </div>
       </section>
 
@@ -125,7 +116,7 @@ function BlogHomePage({ onNavigate, usingRemote }) {
             {searchQuery ? '没有找到相关文章' : '还没有文章哦'}
           </div>
           <div className="blog-empty-desc">
-            {searchQuery ? '试试其他关键词吧～' : '小狐狸正在准备第一篇文章...'}
+            {searchQuery ? '试试其他关键词吧～' : '小wang正在准备第一篇文章...'}
           </div>
         </div>
       ) : (

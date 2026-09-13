@@ -1,9 +1,9 @@
 // PawBlog 关于页（支持远程数据）
 
 function BlogAboutPage({ usingRemote }) {
-  const [admin, setAdmin] = React.useState(null);
-  const [blogInfo, setBlogInfo] = React.useState(null);
   const [loading, setLoading] = React.useState(true);
+  // 博主信息使用硬编码配置，不被远程数据覆盖
+  const admin = getSiteAuthorPublic();
 
   React.useEffect(() => {
     loadData();
@@ -11,23 +11,10 @@ function BlogAboutPage({ usingRemote }) {
 
   const loadData = async () => {
     try {
-      if (usingRemote) {
-        const info = PawRemote.getRemoteBlogInfo();
-        setBlogInfo(info);
-        setAdmin({
-          nickname: info?.author || '小狐狸',
-          avatar: info?.avatar || 'preset:fox',
-          bio: info?.bio || '',
-          location: info?.location || '',
-          email: info?.email || '',
-          github: (info?.socialLinks || []).find(s => s.name === 'GitHub')?.url || '',
-          blog: '',
-          skills: [],
-          siteCreatedAt: null,
-        });
-      } else {
+      // 博主信息使用硬编码配置，无需从远程或本地加载
+      // 这里只等待 DB ready（如后续需要可扩展）
+      if (!usingRemote) {
         await PawDB.ensureReady();
-        setAdmin(await PawDB.getAdminPublic());
       }
     } catch (e) {
       console.warn('[BlogAbout] 加载失败:', e);
@@ -47,7 +34,7 @@ function BlogAboutPage({ usingRemote }) {
     );
   }
 
-  const siteCreatedAt = admin?.siteCreatedAt || (Date.now() - 86400000 * 365);
+  const siteCreatedAt = admin.siteCreatedAt || (Date.now() - 86400000 * 365);
 
   const siteAge = () => {
     const days = Math.floor((Date.now() - siteCreatedAt) / 86400000);
@@ -57,19 +44,19 @@ function BlogAboutPage({ usingRemote }) {
     return `已运行 ${days} 天`;
   };
 
-  const skills = admin?.skills?.length
+  const skills = admin.skills?.length
     ? admin.skills
     : ['前端开发', 'React', 'Vue', 'CSS', 'UI设计', 'furry文化', '写作'];
 
   // 构建社交链接列表
   const socialLinks = [];
-  if (admin?.github) {
+  if (admin.github) {
     socialLinks.push({ name: 'GitHub', url: admin.github, icon: 'github' });
   }
-  if (admin?.email) {
+  if (admin.email) {
     socialLinks.push({ name: '邮箱', url: 'mailto:' + admin.email, icon: 'mail' });
   }
-  if (admin?.blog) {
+  if (admin.blog) {
     socialLinks.push({ name: '博客', url: 'https://' + admin.blog, icon: 'book' });
   }
 
@@ -77,15 +64,15 @@ function BlogAboutPage({ usingRemote }) {
     <div className="blog-page blog-about-page">
       <div className="blog-about-header">
         <div className="blog-about-avatar">
-          {blogGetAvatarEmoji(admin?.avatar)}
+          {blogGetAvatarEmoji(admin.avatar)}
         </div>
-        <h1 className="blog-about-name">{admin?.nickname || 'kings小wang'}</h1>
+        <h1 className="blog-about-name">{admin.nickname}</h1>
         <p className="blog-about-bio">
-          {admin?.bio || '一只热爱代码和毛茸茸文化的小狐狸。'}
+          {admin.bio}
         </p>
         <div className="blog-about-location">
           <BlogMapPinIcon size={13} />
-          {admin?.location || '森林小屋'}
+          {admin.location}
         </div>
       </div>
 

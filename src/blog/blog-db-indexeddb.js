@@ -247,18 +247,44 @@ const PawDB = (function () {
     if (!admin) {
       await _saveAdminRaw({
         id: 'admin_01',
-        username: 'admin',
+        username: 'kingsxiaowang',
         password: hashPassword('admin123'),
         nickname: 'kings小wang',
         avatar: 'preset:fox',
-        bio: '热爱开源和写作，喜欢用毛茸茸的方式记录技术与生活。',
-        location: '森林小屋',
+        bio: '热爱开源和写作，用毛茸茸的方式记录技术与生活。',
+        location: '中国',
         email: 'hi@kingswang.blog',
-        blog: 'kingswang.blog',
-        github: 'https://github.com/kingsxiaowang',
+        blog: 'kings-xiaowang.github.io/kingsxiaowang.github.io/',
+        github: 'https://github.com/kings-xiaowang',
         skills: ['前端开发', 'React', 'Vue', 'CSS', 'UI设计', 'furry文化', '写作'],
         siteCreatedAt: Date.now() - 86400000 * 365,
       });
+    } else {
+      // 旧版数据迁移：检测到昵称是「狐小爪」等旧值时，自动更新为最新默认博主信息
+      // （保留用户自定义的密码，其他字段用新默认值替换）
+      const legacyNames = ['狐小爪', '小狐狸', 'foxiepaws', 'foxie'];
+      const isLegacyNickname = legacyNames.some(n => admin.nickname === n);
+      const isLegacyUsername = admin.username === 'admin';
+      if (isLegacyNickname || isLegacyUsername) {
+        const migrated = {
+          ...admin,
+          username: isLegacyUsername ? 'kingsxiaowang' : admin.username,
+          nickname: 'kings小wang',
+          bio: admin.bio && !legacyNames.some(n => admin.bio.includes(n))
+            ? admin.bio
+            : '热爱开源和写作，用毛茸茸的方式记录技术与生活。',
+          location: admin.location === '森林小屋' ? '中国' : admin.location,
+          email: admin.email || 'hi@kingswang.blog',
+          blog: (!admin.blog || admin.blog === 'kingswang.blog' || admin.blog === 'foxiepaws.com')
+            ? 'kings-xiaowang.github.io/kingsxiaowang.github.io/'
+            : admin.blog,
+          github: (!admin.github || admin.github === 'https://github.com/kingsxiaowang' || admin.github.includes('foxiepaws'))
+            ? 'https://github.com/kings-xiaowang'
+            : admin.github,
+        };
+        await _saveAdminRaw(migrated);
+        console.log('[PawDB] 已迁移旧版博主信息 → kings小wang');
+      }
     }
 
     if (artCount === 0) {
@@ -268,7 +294,7 @@ const PawDB = (function () {
           id: 'post_welcome',
           title: '欢迎来到 kings小wang的个人博客',
           excerpt: '这里是一个记录生活与代码的毛茸茸角落。在这里，我会分享前端开发的心得、毛茸茸的设计灵感，以及日常生活里的点点滴滴…',
-          content: '# 欢迎来到 kings小wang的个人博客 🦊\n\n你好呀！欢迎来到我的小窝～ 这里是一个记录**生活**与**代码**的毛茸茸角落。\n\n我是这里的主人，一只热爱代码和毛茸茸文化的小狐狸。\n\n## 你会在这里找到什么\n\n- 🎨 **设计笔记**：关于毛茸茸风格 UI 的探索与实践\n- 💻 **技术文章**：前端开发中的踩坑与心得\n- 🌿 **生活随笔**：森林小屋的日常碎碎念\n- 🐾 **furry 文化**：关于 furry fandom 的思考\n\n## 关于这个博客\n\n这里就像一本在线的笔记本，记录着我一路走来的点点滴滴。\n无论是技术上的收获，还是生活中的小确幸，都想在这里留下痕迹。\n\n> 愿每一个爪印，都踩在热爱的土地上。\n\n希望你在这里能找到有意思的东西～ 记得常来玩呀！',
+          content: '# 欢迎来到 kings小wang的个人博客 🦊\n\n你好呀！欢迎来到我的小窝～ 这里是一个记录**生活**与**代码**的毛茸茸角落。\n\n我是 kings小wang，热爱开源和写作，用毛茸茸的方式记录技术与生活。\n\n## 你会在这里找到什么\n\n- 🎨 **设计笔记**：关于毛茸茸风格 UI 的探索与实践\n- 💻 **技术文章**：前端开发中的踩坑与心得\n- 🌿 **生活随笔**：生活的日常碎碎念\n- 🐾 **furry 文化**：关于 furry fandom 的思考\n\n## 关于这个博客\n\n这里就像一本在线的笔记本，记录着我一路走来的点点滴滴。\n无论是技术上的收获，还是生活中的小确幸，都想在这里留下痕迹。\n\n> 愿每一个爪印，都踩在热爱的土地上。\n\n希望你在这里能找到有意思的东西～ 记得常来玩呀！',
           category: '随笔',
           tags: ['furry', '博客', '介绍'],
           createdAt: now - 86400000 * 30,
@@ -977,6 +1003,59 @@ const PawDB = (function () {
     await ensureDefaultData();
   }
 
+  // 仅清空文章和文件，保留管理员和设置
+  async function clearArticlesAndFiles() {
+    await ensureReady();
+    if (useLocalStorage) {
+      lsRemove(LS_KEYS.ARTICLES);
+      lsRemove(LS_KEYS.FILE_INDEX);
+      try {
+        const keys = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && k.startsWith(LS_FILE_PREFIX)) keys.push(k);
+        }
+        keys.forEach(k => localStorage.removeItem(k));
+      } catch (e) { /* ignore */ }
+      return;
+    }
+    try {
+      const tx = db.transaction(
+        [STORES.ARTICLES, STORES.FILES],
+        'readwrite'
+      );
+      tx.objectStore(STORES.ARTICLES).clear();
+      tx.objectStore(STORES.FILES).clear();
+      return new Promise((resolve, reject) => {
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+    } catch (e) {
+      console.warn('[PawDB] clearArticlesAndFiles 失败:', e);
+    }
+  }
+
+  // 保存完整 admin 对象（内部使用，同步远程数据用）
+  async function saveAdmin(adminObj) {
+    await ensureReady();
+    await _saveAdminRaw(adminObj);
+    return adminObj;
+  }
+
+  // 保存一篇文章（完整对象，含 id，创建或覆盖）
+  async function saveArticleRaw(article) {
+    await ensureReady();
+    await _saveArticleRaw(article);
+    return article;
+  }
+
+  // 保存一个文件（完整对象，含 id）
+  async function saveFileRaw(fileObj) {
+    await ensureReady();
+    await _saveFileRaw(fileObj);
+    return fileObj;
+  }
+
   // 初始化完成后恢复会话
   init().then(() => {
     restoreSession().catch(() => { /* ignore */ });
@@ -1015,6 +1094,7 @@ const PawDB = (function () {
     getAdmin,
     getAdminPublic,
     updateAdmin,
+    saveAdmin,
     verifyPassword,
 
     isLoggedIn,
@@ -1031,6 +1111,9 @@ const PawDB = (function () {
     exportAllData,
     importAllData,
     clearAllData,
+    clearArticlesAndFiles,
+    saveArticleRaw,
+    saveFileRaw,
   };
 })();
 

@@ -4,9 +4,10 @@ function BlogPostPage({ postId, onNavigate, usingRemote }) {
   const [post, setPost] = React.useState(null);
   const [adjacent, setAdjacent] = React.useState({ prev: null, next: null });
   const [notFound, setNotFound] = React.useState(false);
-  const [admin, setAdmin] = React.useState(null);
   const [loading, setLoading] = React.useState(true);
   const contentRef = React.useRef(null);
+  // 博主信息使用硬编码配置，不被远程数据覆盖
+  const admin = getSiteAuthorPublic();
 
   React.useEffect(() => {
     loadPost();
@@ -36,12 +37,6 @@ function BlogPostPage({ postId, onNavigate, usingRemote }) {
         }
         setPost(p);
         setAdjacent(PawRemote.getRemoteAdjacentArticles(postId));
-        const info = PawRemote.getRemoteBlogInfo();
-        setAdmin({
-          nickname: info?.author || '小狐狸',
-          avatar: info?.avatar || 'preset:fox',
-          bio: info?.bio || '',
-        });
       } else {
         await PawDB.ensureReady();
         const p = await PawDB.getArticleById(postId);
@@ -52,7 +47,6 @@ function BlogPostPage({ postId, onNavigate, usingRemote }) {
         }
         setPost(p);
         setAdjacent(await PawDB.getAdjacentArticles(postId));
-        setAdmin(await PawDB.getAdminPublic());
       }
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (e) {
@@ -135,13 +129,13 @@ function BlogPostPage({ postId, onNavigate, usingRemote }) {
       />
 
       <div className="blog-author-card">
-        <div className="blog-author-avatar">
-          {blogGetAvatarEmoji(admin?.avatar)}
-        </div>
+            <div className="blog-author-avatar">
+              {blogGetAvatarEmoji(admin.avatar)}
+            </div>
         <div className="blog-author-info">
-          <div className="blog-author-name">{admin?.nickname || 'kings小wang'}</div>
+          <div className="blog-author-name">{admin.nickname}</div>
           <div className="blog-author-bio">
-            {admin?.bio || '一只热爱代码和毛茸茸文化的小狐狸。'}
+            {admin.bio}
           </div>
         </div>
       </div>

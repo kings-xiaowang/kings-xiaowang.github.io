@@ -44,6 +44,16 @@ function BlogAdminPage({ onNavigate }) {
   const [lastSync, setLastSync] = React.useState(null);
   const [remoteArticleCount, setRemoteArticleCount] = React.useState(0);
 
+  // Gist 自动同步相关
+  const [githubToken, setGithubTokenState] = React.useState('');
+  const [githubTokenInput, setGithubTokenInput] = React.useState('');
+  const [hasToken, setHasToken] = React.useState(false);
+  const [pushingToGist, setPushingToGist] = React.useState(false);
+  const [lastPushToGist, setLastPushToGist] = React.useState(null);
+  const [unsyncedCount, setUnsyncedCount] = React.useState(0);
+  const [autoSyncEnabled, setAutoSyncState] = React.useState(false);
+  const [gistInfo, setGistInfo] = React.useState({ gistId: null, filename: null, isValid: false, gistPageUrl: null });
+
   React.useEffect(() => {
     checkLogin();
   }, []);
@@ -125,6 +135,8 @@ function BlogAdminPage({ onNavigate }) {
     setShowEditor(false);
     loadPosts();
     loadStorageInfo();
+    // 如果开启了自动同步，后台同步到 Gist
+    tryAutoSyncToGist();
   };
 
   const handleDeleteConfirm = async () => {
@@ -147,6 +159,31 @@ function BlogAdminPage({ onNavigate }) {
     if (last?.articleCount != null) {
       setRemoteArticleCount(last.articleCount);
     }
+
+    // 加载 Gist 同步相关设置
+    const token = await PawRemote.getGithubToken();
+    setHasToken(!!token);
+    setGithubTokenState(token);
+    // 用户未保存过 Token 时，预填预设 Token 到输入框，方便用户直接点保存
+    if (!token) {
+      const presetToken = PawRemote.getPresetGithubToken();
+      setGithubTokenInput(presetToken);
+    } else {
+      // 已有 Token 不回显，保持安全
+      setGithubTokenInput('');
+    }
+
+    const lp = await PawRemote.getLastPushToGist();
+    setLastPushToGist(lp);
+
+    const unsynced = await PawRemote.getUnsavedArticleCount();
+    setUnsyncedCount(unsynced.count);
+
+    const autoSync = await PawRemote.getAutoSyncEnabled();
+    setAutoSyncState(autoSync);
+
+    const gi = await PawRemote.getGistInfo();
+    setGistInfo(gi);
   };
 
   const handleRestoreDefault = async () => {
@@ -188,12 +225,21 @@ function BlogAdminPage({ onNavigate }) {
       return;
     }
     setSyncing(true);
-    setRemoteStatus(null);
+    setRemoteStatus({ type: 'info', message: '正在同步...' });
     try {
       const result = await PawRemote.loadRemoteData({ force: true });
       if (result.success) {
         const count = result.data?.articles?.length || 0;
         setRemoteArticleCount(count);
+
+        // 把远程数据同步到本地 IndexedDB（文章、博主信息、设置）
+        let syncToLocalResult = null;
+        try {
+          syncToLocalResult = await PawRemote.syncRemoteToLocal(result.data);
+        } catch (syncErr) {
+          console.warn('同步到本地失败:', syncErr);
+        }
+
         const info = {
           syncedAt: Date.now(),
           articleCount: count,
@@ -201,9 +247,22 @@ function BlogAdminPage({ onNavigate }) {
         };
         await PawRemote.setLastSyncInfo(info);
         setLastSync(info);
-        setRemoteStatus({ type: 'success', message: `同步成功，共 ${count} 篇文章` });
+
+        let msg = `同步成功，共 ${count} 篇文章`;
+        if (syncToLocalResult) {
+          msg = `同步成功，已更新 ${syncToLocalResult.articleCount} 篇文章和博主信息`;
+        }
+        setRemoteStatus({ type: 'success', message: msg });
+        // 刷新本地数据展示
+        if (syncToLocalResult) {
+          loadPosts();
+          loadStorageInfo();
+        }
       } else {
-        setRemoteStatus({ type: 'error', message: '同步失败：' + (result.error || '未知错误') });
+        setRemoteStatus({
+          type: 'error',
+          message: '同步失败：' + (result.error || '未知错误'),
+        });
       }
     } catch (err) {
       setRemoteStatus({ type: 'error', message: '同步失败：' + err.message });
@@ -233,7 +292,94 @@ function BlogAdminPage({ onNavigate }) {
     }
   };
 
-  // ========== 数据管理 ==========
+  // ========== Gist 自动同步 ==========
+  const handleSaveGithubToken = async () => {
+    // 输入框为空且已有 Token：不修改
+    if (!githubTokenInput.trim() && hasToken) {
+      setRemoteStatus({ type: 'info', message: 'Token 未变更' });
+      return;
+    }
+    const token = githubTokenInput.trim();
+    if (!token) {
+      setRemoteStatus({ type: 'error', message: '请输入 GitHub Personal Access Token' });
+      return;
+    }
+    const ok = await PawRemote.setGithubToken(token);
+    if (ok) {
+      setHasToken(true);
+      setGithubTokenState(token);
+      setGithubTokenInput('');
+      setRemoteStatus({ type: 'success', message: 'GitHub Token 已保存' });
+      // 刷新 Gist 信息
+      const gi = await PawRemote.getGistInfo();
+      setGistInfo(gi);
+    } else {
+      setRemoteStatus({ type: 'error', message: '保存失败' });
+    }
+  };
+
+  const handleClearGithubToken = async () => {
+    if (!confirm('确定要清除 GitHub Token 吗？清除后将无法自动同步到 Gist。')) return;
+    const ok = await PawRemote.clearGithubToken();
+    if (ok) {
+      setHasToken(false);
+      setGithubTokenState('');
+      setGithubTokenInput('');
+      setRemoteStatus({ type: 'success', message: 'Token 已清除' });
+    }
+  };
+
+  const handlePushToGist = async () => {
+    if (!hasToken) {
+      setRemoteStatus({ type: 'error', message: '请先配置 GitHub Token' });
+      return;
+    }
+    if (!gistInfo?.isValid) {
+      setRemoteStatus({ type: 'error', message: '当前数据源不是有效的 Gist 链接，请先设置正确的数据源 URL' });
+      return;
+    }
+    setPushingToGist(true);
+    setRemoteStatus({ type: 'info', message: '正在推送到 Gist...' });
+    try {
+      const result = await PawRemote.syncToGist();
+      setLastPushToGist(result);
+      setUnsyncedCount(0);
+      setRemoteStatus({ type: 'success', message: `同步成功！已更新 ${result.articleCount} 篇文章到 Gist` });
+      blogShowToast('已同步到 Gist', 'success');
+    } catch (err) {
+      console.error('推送到 Gist 失败:', err);
+      setRemoteStatus({ type: 'error', message: '同步失败：' + err.message });
+      blogShowToast('同步 Gist 失败: ' + err.message, 'error');
+    } finally {
+      setPushingToGist(false);
+    }
+  };
+
+  const handleToggleAutoSync = async (enabled) => {
+    if (enabled && !hasToken) {
+      blogShowToast('请先配置 GitHub Token', 'error');
+      return;
+    }
+    const ok = await PawRemote.setAutoSyncEnabled(enabled);
+    if (ok) {
+      setAutoSyncState(enabled);
+      blogShowToast(enabled ? '已开启自动同步' : '已关闭自动同步', 'success');
+    }
+  };
+
+  // 保存文章后自动同步（如果开启了自动同步）
+  const tryAutoSyncToGist = async () => {
+    if (!autoSyncEnabled || !hasToken || !gistInfo?.isValid) return;
+    try {
+      const result = await PawRemote.syncToGist({ silent: true });
+      setLastPushToGist(result);
+      setUnsyncedCount(0);
+      blogShowToast('已自动同步到 Gist', 'success');
+    } catch (err) {
+      console.warn('自动同步到 Gist 失败:', err);
+      blogShowToast('自动同步 Gist 失败: ' + err.message, 'error');
+    }
+  };
   const handleExportData = async () => {
     try {
       blogShowToast('正在导出数据...', 'info');
@@ -289,6 +435,20 @@ function BlogAdminPage({ onNavigate }) {
       loadStorageInfo();
     } catch (err) {
       blogShowToast('清空失败: ' + err.message, 'error');
+    }
+  };
+
+  const handleResetToDefault = async () => {
+    if (!confirm('确定要重置为默认数据吗？\n\n所有文章、文件和设置都会被清除，并恢复为初始的默认数据（含示例文章和默认博主信息 kings小wang）。\n\n此操作不可撤销，建议先备份。')) return;
+    try {
+      blogShowToast('正在重置...', 'info');
+      await PawDB.clearAllData();
+      blogShowToast('已重置为默认数据，页面即将刷新', 'success');
+      setShowConfirmClear(false);
+      // 1.5 秒后刷新页面，确保所有 state 重新加载
+      setTimeout(() => { window.location.reload(); }, 1500);
+    } catch (err) {
+      blogShowToast('重置失败: ' + err.message, 'error');
     }
   };
 
@@ -462,6 +622,18 @@ function BlogAdminPage({ onNavigate }) {
           onSync={handleSyncNow}
           onExport={handleExportRemoteFormat}
           onRestoreDefault={handleRestoreDefault}
+          hasToken={hasToken}
+          githubTokenInput={githubTokenInput}
+          setGithubTokenInput={setGithubTokenInput}
+          onSaveToken={handleSaveGithubToken}
+          onClearToken={handleClearGithubToken}
+          pushingToGist={pushingToGist}
+          onPushToGist={handlePushToGist}
+          lastPushToGist={lastPushToGist}
+          unsyncedCount={unsyncedCount}
+          autoSyncEnabled={autoSyncEnabled}
+          onToggleAutoSync={handleToggleAutoSync}
+          gistInfo={gistInfo}
         />
       )}
 
@@ -471,6 +643,7 @@ function BlogAdminPage({ onNavigate }) {
           onExport={handleExportData}
           onImport={handleImportClick}
           onClear={() => setShowConfirmClear(true)}
+          onResetToDefault={handleResetToDefault}
           onRefresh={loadStorageInfo}
           onExportWebsite={handleExportWebsite}
           exportingWebsite={exportingWebsite}
@@ -567,6 +740,19 @@ function BlogRemotePanel({
   onSync,
   onExport,
   onRestoreDefault,
+  // Gist 同步相关
+  hasToken,
+  githubTokenInput,
+  setGithubTokenInput,
+  onSaveToken,
+  onClearToken,
+  pushingToGist,
+  onPushToGist,
+  lastPushToGist,
+  unsyncedCount,
+  autoSyncEnabled,
+  onToggleAutoSync,
+  gistInfo,
 }) {
   const isConfigured = true; // 总有默认值，所以总是已配置
   const isUsingDefault = !remoteUrl;
@@ -677,17 +863,177 @@ function BlogRemotePanel({
         </button>
       </div>
 
+      {/* GitHub 自动同步到 Gist */}
+      <div className="blog-data-card">
+        <div className="blog-data-card-title">
+          <BlogGithubIcon size={18} />
+          GitHub 自动同步
+        </div>
+        <p style={{ fontSize: 13, color: 'var(--blog-text-secondary)', lineHeight: 1.8, margin: '0 0 16px 0' }}>
+          配置 GitHub Personal Access Token 后，可以直接把本地数据推送到 Gist，无需手动导出复制粘贴。
+          <br />
+          Token 需要在 <code style={{
+            padding: '2px 6px',
+            background: 'var(--blog-cream-100)',
+            borderRadius: '4px',
+            fontSize: 12,
+          }}>github.com → Settings → Developer settings → Personal access tokens</code> 中创建，
+          勾选 <strong>gist</strong> 权限即可。Token 只保存在你本地的浏览器中，不会上传到任何服务器。
+        </p>
+
+        <div className="blog-form-group">
+          <label className="blog-form-label">
+            GitHub Personal Access Token
+            <span style={{ marginLeft: 8, fontSize: 12, fontWeight: 'normal', color: hasToken ? 'var(--blog-forest-600)' : 'var(--blog-text-tertiary)' }}>
+              {hasToken ? '✅ 已配置' : '❌ 未配置'}
+            </span>
+          </label>
+          <input
+            className="blog-form-input"
+            type="password"
+            value={githubTokenInput}
+            onChange={(e) => setGithubTokenInput(e.target.value)}
+            placeholder={hasToken ? '••••••••（已有 Token，留空则不修改）' : 'ghp_xxxxxxxxxxxxxxxxxxxx'}
+            autoComplete="off"
+          />
+          {!hasToken && githubTokenInput && (
+            <p style={{ fontSize: 12, color: 'var(--blog-caramel-600)', marginTop: 8, marginBottom: 0 }}>
+              ⚠  Token 已预填，点击「保存 Token」即可启用。建议定期在 GitHub 设置中轮换 Token。
+            </p>
+          )}
+          <div style={{ marginTop: 8, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <button
+              className="blog-btn blog-btn-primary"
+              onClick={onSaveToken}
+              disabled={!githubTokenInput.trim() && hasToken}
+            >
+              💾 {hasToken ? '更新 Token' : '保存 Token'}
+            </button>
+            {hasToken && (
+              <button className="blog-btn blog-btn-ghost" onClick={onClearToken}>
+                🗑 清除 Token
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Gist 信息 */}
+        {hasToken && (
+          <div style={{
+            marginTop: 16,
+            padding: '12px 14px',
+            background: 'var(--blog-cream-100)',
+            borderRadius: 'var(--blog-radius-md)',
+            fontSize: 13,
+            lineHeight: 1.8,
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+              <span style={{ color: 'var(--blog-text-secondary)' }}>Gist ID：</span>
+              <span style={{ fontFamily: 'monospace', color: 'var(--blog-text-primary)' }}>
+                {gistInfo?.gistId || '—'}
+              </span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+              <span style={{ color: 'var(--blog-text-secondary)' }}>文件名：</span>
+              <span style={{ fontFamily: 'monospace', color: 'var(--blog-text-primary)' }}>
+                {gistInfo?.filename || '—'}
+              </span>
+            </div>
+            {gistInfo?.gistPageUrl && (
+              <div style={{ marginTop: 4 }}>
+                <a
+                  href={gistInfo.gistPageUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: 'var(--blog-caramel-600)', textDecoration: 'none', fontSize: 12 }}
+                >
+                  🔗 在 GitHub 查看 Gist
+                </a>
+              </div>
+            )}
+            {!gistInfo?.isValid && (
+              <div style={{
+                marginTop: 8,
+                color: 'var(--blog-rose-500)',
+                fontSize: 12,
+              }}>
+                ⚠  无法从当前数据源 URL 识别 Gist，请确认 URL 格式为 gist.githubusercontent.com 的 raw 链接
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 同步状态和操作 */}
+        {hasToken && (
+          <div style={{ marginTop: 16 }}>
+            <div className="blog-stats-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', marginBottom: 12 }}>
+              <div className="blog-stat-item">
+                <div className="blog-stat-value" style={{ fontSize: 18 }}>
+                  {unsyncedCount > 0 ? `⚠ ${unsyncedCount}` : '✅'}
+                </div>
+                <div className="blog-stat-label">未同步文章</div>
+              </div>
+              <div className="blog-stat-item">
+                <div className="blog-stat-value" style={{ fontSize: 13, wordBreak: 'break-all' }}>
+                  {lastPushToGist?.pushedAt ? blogFormatDateShort(lastPushToGist.pushedAt) : '—'}
+                </div>
+                <div className="blog-stat-label">上次推送</div>
+              </div>
+              <div className="blog-stat-item">
+                <div className="blog-stat-value" style={{ fontSize: 18 }}>
+                  {autoSyncEnabled ? '🟢' : '⚪'}
+                </div>
+                <div className="blog-stat-label">自动同步</div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              <button
+                className="blog-btn blog-btn-primary"
+                onClick={onPushToGist}
+                disabled={pushingToGist || !gistInfo?.isValid}
+                style={{ flex: 1, minWidth: 160 }}
+              >
+                {pushingToGist ? '🔄 推送中...' : '🚀 同步到 Gist'}
+              </button>
+              <label style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '0 12px',
+                background: 'var(--blog-bg-soft)',
+                border: '1px solid var(--blog-border)',
+                borderRadius: 'var(--blog-radius-md)',
+                fontSize: 13,
+                color: 'var(--blog-text-secondary)',
+                cursor: 'pointer',
+                userSelect: 'none',
+              }}>
+                <input
+                  type="checkbox"
+                  checked={autoSyncEnabled}
+                  onChange={(e) => onToggleAutoSync(e.target.checked)}
+                  disabled={!gistInfo?.isValid}
+                />
+                保存后自动同步
+              </label>
+            </div>
+          </div>
+        )}
+      </div>
+
       <div className="blog-data-card">
         <div className="blog-data-card-title">
           <BlogLightbulbIcon size={18} />
           使用说明
         </div>
         <ol style={{ fontSize: 13, color: 'var(--blog-text-secondary)', lineHeight: 2, margin: 0, paddingLeft: 20 }}>
-          <li>在「文章管理」中写好文章，上传图片/附件</li>
-          <li>点击上方「导出数据（远程格式）」，得到一个 JSON 文件</li>
-          <li>把 JSON 文件上传到 GitHub Gist 或其他支持 raw 链接的地方</li>
-          <li>把 raw 链接粘贴到上方输入框，点击「保存设置」</li>
-          <li>点击「立即同步」测试一下，访客访问首页时就会自动从远程加载</li>
+          <li>在 GitHub 创建一个 Gist，新建一个 <code style={{ padding: '2px 4px', background: 'var(--blog-cream-100)', borderRadius: 3, fontSize: 12 }}>.json</code> 文件</li>
+          <li>创建 GitHub Personal Access Token（勾选 gist 权限）</li>
+          <li>把 Gist 的 raw 链接粘贴到上方「远程数据 URL」并保存</li>
+          <li>在下方「GitHub 自动同步」中填入 Token 并保存</li>
+          <li>点击「🚀 同步到 Gist」或开启自动同步，数据会自动推送到 Gist</li>
+          <li>访客访问首页时，就会自动从 Gist 加载最新文章</li>
         </ol>
       </div>
     </div>
@@ -711,7 +1057,7 @@ const BlogLightbulbIcon = ({ size = 18, color = 'currentColor' }) => (
 );
 
 // 数据管理面板组件
-function BlogDataPanel({ storageInfo, onExport, onImport, onClear, onRefresh, onExportWebsite, exportingWebsite, exportedWebsiteInfo }) {
+function BlogDataPanel({ storageInfo, onExport, onImport, onClear, onResetToDefault, onRefresh, onExportWebsite, exportingWebsite, exportedWebsiteInfo }) {
   if (!storageInfo) {
     return (
       <div style={{ padding: '60px 0', textAlign: 'center', color: 'var(--blog-text-tertiary)' }}>
@@ -819,6 +1165,14 @@ function BlogDataPanel({ storageInfo, onExport, onImport, onClear, onRefresh, on
               <div className="blog-data-action-desc">删除所有文章、文件，恢复默认设置</div>
             </div>
             <BlogChevronRightIcon size={18} style={{ marginLeft: 'auto', color: 'var(--blog-rose-400)' }} />
+          </button>
+          <button className="blog-data-action-btn" onClick={onResetToDefault} style={{ borderColor: 'var(--blog-caramel-200)' }}>
+            <div className="blog-data-action-icon">🔄</div>
+            <div>
+              <div className="blog-data-action-title">重置为默认数据</div>
+              <div className="blog-data-action-desc">清除所有数据并恢复初始默认内容（博主信息 kings小wang + 示例文章）</div>
+            </div>
+            <BlogChevronRightIcon size={18} style={{ marginLeft: 'auto', color: 'var(--blog-text-tertiary)' }} />
           </button>
         </div>
       </div>

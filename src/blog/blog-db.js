@@ -137,19 +137,47 @@ function blogEnsureInitialized() {
   if (wasReset || !blogLsGet(BLOG_STORAGE_KEYS.ADMIN, null)) {
     const defaultAdmin = {
       id: 'admin_01',
-      username: 'admin',
+      username: 'kingsxiaowang',
       password: blogHashPassword('admin123'),
       nickname: 'kings小wang',
       avatar: 'preset:fox',
-      bio: '热爱开源和写作，喜欢用毛茸茸的方式记录技术与生活。',
-      location: '森林小屋',
+      bio: '热爱开源和写作，用毛茸茸的方式记录技术与生活。',
+      location: '中国',
       email: 'hi@kingswang.blog',
-      blog: 'kingswang.blog',
-      github: 'https://github.com/kingsxiaowang',
+      blog: 'kings-xiaowang.github.io/kingsxiaowang.github.io/',
+      github: 'https://github.com/kings-xiaowang',
       skills: ['前端开发', 'React', 'Vue', 'CSS', 'UI设计', 'furry文化', '写作'],
       siteCreatedAt: Date.now() - 86400000 * 365,
     };
     blogLsSet(BLOG_STORAGE_KEYS.ADMIN, defaultAdmin);
+  } else {
+    // 旧版数据迁移：检测到旧昵称时自动更新博主信息
+    const existing = blogLsGet(BLOG_STORAGE_KEYS.ADMIN, null);
+    if (existing) {
+      const legacyNames = ['狐小爪', '小狐狸', 'foxiepaws', 'foxie'];
+      const isLegacyNickname = legacyNames.some(n => existing.nickname === n);
+      const isLegacyUsername = existing.username === 'admin';
+      if (isLegacyNickname || isLegacyUsername) {
+        const migrated = {
+          ...existing,
+          username: isLegacyUsername ? 'kingsxiaowang' : existing.username,
+          nickname: 'kings小wang',
+          bio: existing.bio && !legacyNames.some(n => existing.bio.includes(n))
+            ? existing.bio
+            : '热爱开源和写作，用毛茸茸的方式记录技术与生活。',
+          location: existing.location === '森林小屋' ? '中国' : existing.location,
+          email: existing.email || 'hi@kingswang.blog',
+          blog: (!existing.blog || existing.blog === 'kingswang.blog' || existing.blog === 'foxiepaws.com')
+            ? 'kings-xiaowang.github.io/kingsxiaowang.github.io/'
+            : existing.blog,
+          github: (!existing.github || existing.github === 'https://github.com/kingsxiaowang' || (existing.github && existing.github.includes('foxiepaws')))
+            ? 'https://github.com/kings-xiaowang'
+            : existing.github,
+        };
+        blogLsSet(BLOG_STORAGE_KEYS.ADMIN, migrated);
+        console.log('[PawBlog] 已迁移旧版博主信息 → kings小wang');
+      }
+    }
   }
 
   // 示例文章
@@ -170,7 +198,7 @@ function blogEnsureInitialized() {
 
 - 🎨 **设计笔记**：关于毛茸茸风格 UI 的探索与实践
 - 💻 **技术文章**：前端开发中的踩坑与心得
-- 🌿 **生活随笔**：森林小屋的日常碎碎念
+- 🌿 **生活随笔**：生活的日常碎碎念
 - 🐾 **furry 文化**：关于 furry fandom 的思考
 
 ## 关于这个博客

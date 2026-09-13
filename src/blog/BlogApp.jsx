@@ -66,8 +66,9 @@ function BlogApp() {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   const [loggedIn, setLoggedIn] = React.useState(false);
   const [initialized, setInitialized] = React.useState(false);
-  const [siteName, setSiteName] = React.useState('kings小wang的个人博客');
-  const [adminNickname, setAdminNickname] = React.useState('kings小wang');
+  // 博客名称和博主昵称使用硬编码配置，不被远程数据覆盖
+  const siteName = SITE_CONFIG.siteName;
+  const adminNickname = SITE_CONFIG.author.nickname;
 
   // 远程数据相关
   const [remoteLoading, setRemoteLoading] = React.useState(false);
@@ -108,10 +109,6 @@ function BlogApp() {
   const initApp = async () => {
     try {
       await PawDB.init();
-      const name = await PawDB.getSetting('siteName', 'kings小wang的个人博客');
-      setSiteName(name);
-      const admin = await PawDB.getAdminPublic();
-      if (admin) setAdminNickname(admin.nickname);
       setLoggedIn(PawDB.isLoggedIn());
     } catch (e) {
       console.error('[BlogApp] DB 初始化失败:', e);
@@ -136,15 +133,10 @@ function BlogApp() {
       const result = await PawRemote.loadRemoteData({ force: false });
       if (result.success && result.data) {
         setUsingRemote(true);
-        // 如果远程有博客信息，更新站点名
-        const info = PawRemote.getRemoteBlogInfo();
-        if (info?.title) setSiteName(info.title);
+        // 站点名称和博主信息由硬编码配置决定，不随远程数据变化
       } else {
         setUsingRemote(false);
         setRemoteError(result.error || '远程数据加载失败');
-        // 用回本地站点名
-        const name = await PawDB.getSetting('siteName', 'kings小wang的个人博客');
-        setSiteName(name);
       }
     } catch (e) {
       setUsingRemote(false);
@@ -182,7 +174,7 @@ function BlogApp() {
         React.createElement('div', {
           style: { fontSize: '40px', animation: 'blogPawBounce 0.8s ease-in-out infinite' }
         }, '🐾'),
-        React.createElement('div', null, '小狐狸正在起床...')
+        React.createElement('div', null, '小wang正在起床...')
       )
     );
   }
