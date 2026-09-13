@@ -1,0 +1,805 @@
+// PawBlog 管理后台（IndexedDB 版）- 文章管理 + 数据管理
+
+function BlogAdminPage({ onNavigate }) {
+  const [loggedIn, setLoggedIn] = React.useState(false);
+  const [posts, setPosts] = React.useState([]);
+  const [showEditor, setShowEditor] = React.useState(false);
+  const [editingPost, setEditingPost] = React.useState(null);
+  const [confirmDelete, setConfirmDelete] = React.useState(null);
+  const [loginForm, setLoginForm] = React.useState({ username: 'admin', password: '' });
+  const [loginError, setLoginError] = React.useState('');
+  const [loginLoading, setLoginLoading] = React.useState(false);
+  const [activeTab, setActiveTab] = React.useState('articles'); // articles | data
+  const [storageInfo, setStorageInfo] = React.useState(null);
+  const [showDataPanel, setShowDataPanel] = React.useState(false);
+  const [showConfirmClear, setShowConfirmClear] = React.useState(false);
+  const [importInput, setImportInput] = React.useState(null);
+  const fileInputRef = React.useRef(null);
+
+  // 数据源设置相关
+  const [remoteUrl, setRemoteUrlState] = React.useState('');
+  const [remoteUrlInput, setRemoteUrlInput] = React.useState('');
+  const [remoteStatus, setRemoteStatus] = React.useState(null); // { type, message }
+  const [syncing, setSyncing] = React.useState(false);
+  const [lastSync, setLastSync] = React.useState(null);
+  const [remoteArticleCount, setRemoteArticleCount] = React.useState(0);
+
+  React.useEffect(() => {
+    checkLogin();
+  }, []);
+
+  const checkLogin = async () => {
+    await PawDB.ensureReady();
+    const isLoggedIn = PawDB.isLoggedIn();
+    setLoggedIn(isLoggedIn);
+    if (isLoggedIn) {
+      loadPosts();
+      loadStorageInfo();
+      loadRemoteSettings();
+    }
+  };
+
+  const loadPosts = async () => {
+    const all = await PawDB.getArticles(false);
+    setPosts(all.sort((a, b) => b.createdAt - a.createdAt));
+  };
+
+  const loadStorageInfo = async () => {
+    const info = await PawDB.getStorageUsage();
+    setStorageInfo(info);
+  };
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setLoginError('');
+    setLoginLoading(true);
+    try {
+      await new Promise(r => setTimeout(r, 200));
+      const admin = await PawDB.login(
+        loginForm.username.trim(),
+        loginForm.password
+      );
+      if (!admin) {
+        setLoginError('用户名或密码错误');
+        return;
+      }
+      setLoggedIn(true);
+      loadPosts();
+      loadStorageInfo();
+      blogShowToast('欢迎回来，管理员～', 'success');
+    } finally {
+      setLoginLoading(false);
+    }
+  };
+
+  const handleLogout = () => {
+    PawDB.logout();
+    setLoggedIn(false);
+    blogShowToast('已退出登录', 'info');
+  };
+
+  const handleNewPost = () => {
+    setEditingPost(null);
+    setShowEditor(true);
+  };
+
+  const handleEditPost = (post) => {
+    setEditingPost(post);
+    setShowEditor(true);
+  };
+
+  const handleSavePost = async (postData, opts) => {
+    let savedPost;
+    if (editingPost) {
+      savedPost = await PawDB.updateArticle(editingPost.id, postData);
+      blogShowToast('文章已更新', 'success');
+    } else {
+      savedPost = await PawDB.createArticle(postData);
+      if (opts?.pendingFiles && opts.pendingFiles.length > 0) {
+        for (const fileId of opts.pendingFiles) {
+          try { await PawDB.setFilePostId(fileId, savedPost.id); } catch (e) { /* ignore */ }
+        }
+      }
+      blogShowToast('文章已发布', 'success');
+    }
+    setShowEditor(false);
+    loadPosts();
+    loadStorageInfo();
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!confirmDelete) return;
+    await PawDB.deleteArticle(confirmDelete.id);
+    blogShowToast('文章已删除', 'success');
+    setConfirmDelete(null);
+    loadPosts();
+    loadStorageInfo();
+  };
+
+  // ========== 数据源设置 ==========
+  const loadRemoteSettings = async () => {
+    const url = await PawRemote.getRemoteUrl();
+    setRemoteUrlState(url);
+    setRemoteUrlInput(url);
+    const last = await PawRemote.getLastSyncInfo();
+    setLastSync(last);
+    if (last?.articleCount != null) {
+      setRemoteArticleCount(last.articleCount);
+    }
+  };
+
+  const handleSaveRemoteUrl = async () => {
+    const url = remoteUrlInput.trim();
+    if (url && !url.startsWith('http')) {
+      setRemoteStatus({ type: 'error', message: 'URL 必须以 http:// 或 https:// 开头' });
+      return;
+    }
+    const ok = await PawRemote.setRemoteUrl(url);
+    if (ok) {
+      setRemoteUrlState(url);
+      setRemoteStatus({ type: 'success', message: '数据源地址已保存' });
+      // 清空上次同步状态
+      setLastSync(null);
+      setRemoteArticleCount(0);
+      PawRemote.clearRemoteCache();
+    } else {
+      setRemoteStatus({ type: 'error', message: '保存失败' });
+    }
+  };
+
+  const handleSyncNow = async () => {
+    if (!remoteUrlInput.trim()) {
+      setRemoteStatus({ type: 'error', message: '请先填写并保存数据源地址' });
+      return;
+    }
+    setSyncing(true);
+    setRemoteStatus(null);
+    try {
+      const result = await PawRemote.loadRemoteData({ force: true });
+      if (result.success) {
+        const count = result.data?.articles?.length || 0;
+        setRemoteArticleCount(count);
+        const info = {
+          syncedAt: Date.now(),
+          articleCount: count,
+          status: 'success',
+        };
+        await PawRemote.setLastSyncInfo(info);
+        setLastSync(info);
+        setRemoteStatus({ type: 'success', message: `同步成功，共 ${count} 篇文章` });
+      } else {
+        setRemoteStatus({ type: 'error', message: '同步失败：' + (result.error || '未知错误') });
+      }
+    } catch (err) {
+      setRemoteStatus({ type: 'error', message: '同步失败：' + err.message });
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const handleExportRemoteFormat = async () => {
+    try {
+      blogShowToast('正在生成导出文件...', 'info');
+      const data = await PawRemote.exportRemoteFormat();
+      const jsonStr = JSON.stringify(data, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `pawblog-data-${blogFormatDateShort(Date.now())}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      blogShowToast('导出成功', 'success');
+    } catch (err) {
+      console.error('导出失败:', err);
+      blogShowToast('导出失败: ' + err.message, 'error');
+    }
+  };
+
+  // ========== 数据管理 ==========
+  const handleExportData = async () => {
+    try {
+      blogShowToast('正在导出数据...', 'info');
+      const data = await PawDB.exportAllData();
+      const jsonStr = JSON.stringify(data, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `pawblog-backup-${blogFormatDateShort(Date.now())}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      blogShowToast('数据导出成功', 'success');
+    } catch (err) {
+      console.error('导出失败:', err);
+      blogShowToast('导出失败: ' + err.message, 'error');
+    }
+  };
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleImportFile = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+
+    if (!confirm('导入数据将覆盖当前所有文章和文件，确定继续吗？')) return;
+
+    try {
+      blogShowToast('正在导入数据...', 'info');
+      const text = await file.text();
+      const data = JSON.parse(text);
+      const result = await PawDB.importAllData(data, { clearFirst: true });
+      blogShowToast(`导入成功：${result.articles} 篇文章，${result.files} 个文件`, 'success');
+      loadPosts();
+      loadStorageInfo();
+    } catch (err) {
+      console.error('导入失败:', err);
+      blogShowToast('导入失败: ' + err.message, 'error');
+    }
+  };
+
+  const handleClearAllData = async () => {
+    try {
+      await PawDB.clearAllData();
+      blogShowToast('数据已清空，已恢复默认设置', 'success');
+      setShowConfirmClear(false);
+      loadPosts();
+      loadStorageInfo();
+    } catch (err) {
+      blogShowToast('清空失败: ' + err.message, 'error');
+    }
+  };
+
+  // ========== 渲染 ==========
+  if (!loggedIn) {
+    return (
+      <div className="blog-page">
+        <div className="blog-login-wrap">
+          <div className="blog-login-card">
+            <div className="blog-login-logo">
+              <div className="blog-login-icon">
+                <BlogPawIcon size={28} color="white" />
+              </div>
+              <div className="blog-login-title">管理后台</div>
+              <div className="blog-login-subtitle">PawBlog · 爪印博客</div>
+            </div>
+
+            <form onSubmit={handleLogin}>
+              {loginError && (
+                <div className="blog-login-error">{loginError}</div>
+              )}
+              <div className="blog-form-group">
+                <label className="blog-form-label">用户名</label>
+                <input
+                  className="blog-form-input"
+                  type="text"
+                  value={loginForm.username}
+                  onChange={(e) => setLoginForm({ ...loginForm, username: e.target.value })}
+                  placeholder="请输入用户名"
+                  autoFocus
+                />
+              </div>
+              <div className="blog-form-group">
+                <label className="blog-form-label">密码</label>
+                <input
+                  className="blog-form-input"
+                  type="password"
+                  value={loginForm.password}
+                  onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
+                  placeholder="请输入密码"
+                />
+              </div>
+              <button
+                type="submit"
+                className="blog-btn blog-btn-primary blog-btn-full"
+                disabled={loginLoading}
+              >
+                {loginLoading ? '登录中...' : '登 录'}
+              </button>
+            </form>
+
+            <div className="blog-login-hint">
+              默认账号：admin / admin123
+            </div>
+            <div style={{ textAlign: 'center', marginTop: 16 }}>
+              <button
+                className="blog-btn blog-btn-secondary blog-btn-sm"
+                onClick={() => onNavigate('home')}
+              >
+                <BlogArrowLeftIcon size={14} /> 返回博客
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="blog-page blog-admin-layout">
+      <div className="blog-admin-header">
+        <div>
+          <h1 className="blog-admin-title">管理后台</h1>
+          <div className="blog-admin-subtitle">共 {posts.length} 篇文章</div>
+        </div>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+          <button className="blog-btn blog-btn-secondary blog-btn-sm" onClick={() => onNavigate('home')}>
+            <BlogHomeIcon size={14} /> 查看博客
+          </button>
+          <button className="blog-btn blog-btn-primary" onClick={handleNewPost}>
+            <BlogPlusIcon size={16} /> 写新文章
+          </button>
+          <button className="blog-btn blog-btn-secondary blog-btn-sm" onClick={handleLogout}>
+            <BlogLogoutIcon size={14} /> 退出
+          </button>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="blog-admin-tabs">
+        <button
+          className={`blog-admin-tab ${activeTab === 'articles' ? 'active' : ''}`}
+          onClick={() => setActiveTab('articles')}
+        >
+          <BlogBookOpenIcon size={16} /> 文章管理
+        </button>
+        <button
+          className={`blog-admin-tab ${activeTab === 'remote' ? 'active' : ''}`}
+          onClick={() => { setActiveTab('remote'); loadRemoteSettings(); }}
+        >
+          <BlogGlobeIcon size={16} /> 数据源设置
+        </button>
+        <button
+          className={`blog-admin-tab ${activeTab === 'data' ? 'active' : ''}`}
+          onClick={() => { setActiveTab('data'); loadStorageInfo(); }}
+        >
+          <BlogDatabaseIcon size={16} /> 数据管理
+        </button>
+      </div>
+
+      {activeTab === 'articles' && (
+        <>
+          {posts.length === 0 ? (
+            <div className="blog-empty">
+              <div className="blog-empty-emoji">✍️</div>
+              <div className="blog-empty-title">还没有文章</div>
+              <div className="blog-empty-desc">点击右上角「写新文章」开始创作吧</div>
+            </div>
+          ) : (
+            <div className="blog-admin-post-list">
+              {posts.map(post => (
+                <div key={post.id} className="blog-admin-post-item">
+                  <div className="blog-admin-post-info">
+                    <div className="blog-admin-post-title">
+                      {post.published === false && <span style={{ color: 'var(--blog-text-tertiary)' }}>[草稿] </span>}
+                      {post.title}
+                    </div>
+                    <div className="blog-admin-post-meta">
+                      <span>{blogFormatDate(post.createdAt)}</span>
+                      <span>{post.category}</span>
+                      <span>{PawDB.estimateReadingTime(post.content)} 分钟阅读</span>
+                    </div>
+                  </div>
+                  <div className="blog-admin-post-actions">
+                    <button
+                      className="blog-btn blog-btn-secondary blog-btn-sm"
+                      onClick={() => onNavigate('post', { id: post.id })}
+                    >
+                      预览
+                    </button>
+                    <button
+                      className="blog-btn blog-btn-secondary blog-btn-sm"
+                      onClick={() => handleEditPost(post)}
+                    >
+                      <BlogEditIcon size={13} /> 编辑
+                    </button>
+                    <button
+                      className="blog-btn blog-btn-danger blog-btn-sm"
+                      onClick={() => setConfirmDelete(post)}
+                    >
+                      <BlogTrashIcon size={13} /> 删除
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {activeTab === 'remote' && (
+        <BlogRemotePanel
+          remoteUrl={remoteUrl}
+          remoteUrlInput={remoteUrlInput}
+          setRemoteUrlInput={setRemoteUrlInput}
+          remoteStatus={remoteStatus}
+          syncing={syncing}
+          lastSync={lastSync}
+          remoteArticleCount={remoteArticleCount}
+          onSave={handleSaveRemoteUrl}
+          onSync={handleSyncNow}
+          onExport={handleExportRemoteFormat}
+        />
+      )}
+
+      {activeTab === 'data' && (
+        <BlogDataPanel
+          storageInfo={storageInfo}
+          onExport={handleExportData}
+          onImport={handleImportClick}
+          onClear={() => setShowConfirmClear(true)}
+          onRefresh={loadStorageInfo}
+        />
+      )}
+
+      {/* 隐藏的 file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".json"
+        style={{ display: 'none' }}
+        onChange={handleImportFile}
+      />
+
+      {/* 编辑器 */}
+      {showEditor && (
+        <BlogPostEditor
+          post={editingPost}
+          onSave={handleSavePost}
+          onClose={() => { setShowEditor(false); loadPosts(); }}
+        />
+      )}
+
+      {/* 删除文章确认 */}
+      {confirmDelete && (
+        <div className="blog-modal-overlay" onClick={() => setConfirmDelete(null)}>
+          <div className="blog-modal blog-confirm-box" onClick={(e) => e.stopPropagation()}>
+            <div className="blog-confirm-icon">🗑️</div>
+            <div className="blog-confirm-title">确认删除这篇文章？</div>
+            <div className="blog-confirm-desc">
+              「{confirmDelete.title}」删除后，关联的图片和附件也会一并删除，无法恢复。
+            </div>
+            <div className="blog-confirm-buttons">
+              <button
+                className="blog-btn blog-btn-secondary"
+                onClick={() => setConfirmDelete(null)}
+              >
+                取消
+              </button>
+              <button
+                className="blog-btn blog-btn-danger"
+                onClick={handleDeleteConfirm}
+              >
+                确认删除
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 清空数据确认 */}
+      {showConfirmClear && (
+        <div className="blog-modal-overlay" onClick={() => setShowConfirmClear(false)}>
+          <div className="blog-modal blog-confirm-box" onClick={(e) => e.stopPropagation()}>
+            <div className="blog-confirm-icon">⚠️</div>
+            <div className="blog-confirm-title">确定清空所有数据？</div>
+            <div className="blog-confirm-desc">
+              这将删除所有文章、图片、附件和设置，仅保留管理员账号。
+              <br /><strong>此操作不可恢复，请先导出备份！</strong>
+            </div>
+            <div className="blog-confirm-buttons">
+              <button
+                className="blog-btn blog-btn-secondary"
+                onClick={() => setShowConfirmClear(false)}
+              >
+                取消
+              </button>
+              <button
+                className="blog-btn blog-btn-danger"
+                onClick={handleClearAllData}
+              >
+                确认清空
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// 数据源设置面板组件
+function BlogRemotePanel({
+  remoteUrl,
+  remoteUrlInput,
+  setRemoteUrlInput,
+  remoteStatus,
+  syncing,
+  lastSync,
+  remoteArticleCount,
+  onSave,
+  onSync,
+  onExport,
+}) {
+  const isConfigured = !!remoteUrl;
+
+  return (
+    <div className="blog-data-panel">
+      <div className="blog-data-card">
+        <div className="blog-data-card-title">
+          <BlogGlobeIcon size={18} />
+          远程数据源
+        </div>
+        <p style={{ fontSize: 13, color: 'var(--blog-text-secondary)', lineHeight: 1.8, margin: '0 0 18px 0' }}>
+          配置一个公开的 JSON URL（如 GitHub Gist raw 链接），访客访问网站时会从该地址加载文章数据。
+          <br />
+          这样你只需在本地写好文章，导出 JSON 后上传到 Gist，其他人就能看到最新内容。
+        </p>
+
+        <div className="blog-form-group">
+          <label className="blog-form-label">远程数据 URL</label>
+          <input
+            className="blog-form-input"
+            type="text"
+            value={remoteUrlInput}
+            onChange={(e) => setRemoteUrlInput(e.target.value)}
+            placeholder="https://gist.githubusercontent.com/xxx/raw/blog-data.json"
+          />
+          <div style={{ marginTop: 8, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <button className="blog-btn blog-btn-primary" onClick={onSave}>
+              保存设置
+            </button>
+            <button
+              className="blog-btn blog-btn-secondary"
+              onClick={onSync}
+              disabled={syncing || !isConfigured}
+            >
+              {syncing ? '同步中...' : '🔄 立即同步'}
+            </button>
+          </div>
+        </div>
+
+        {remoteStatus && (
+          <div className={`blog-remote-status blog-remote-status-${remoteStatus.type}`}>
+            {remoteStatus.type === 'success' ? '✅ ' : '⚠️ '}
+            {remoteStatus.message}
+          </div>
+        )}
+      </div>
+
+      <div className="blog-data-card">
+        <div className="blog-data-card-title">
+          <BlogInfoIcon size={18} />
+          当前状态
+        </div>
+        <div className="blog-stats-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+          <div className="blog-stat-item">
+            <div className="blog-stat-value" style={{ fontSize: 20 }}>
+              {isConfigured ? '✅' : '❌'}
+            </div>
+            <div className="blog-stat-label">数据源状态</div>
+          </div>
+          <div className="blog-stat-item">
+            <div className="blog-stat-value" style={{ fontSize: 20 }}>
+              {remoteArticleCount}
+            </div>
+            <div className="blog-stat-label">远程文章数</div>
+          </div>
+          <div className="blog-stat-item">
+            <div className="blog-stat-value" style={{ fontSize: 14, wordBreak: 'break-all' }}>
+              {lastSync?.syncedAt ? blogFormatDateShort(lastSync.syncedAt) : '—'}
+            </div>
+            <div className="blog-stat-label">上次同步</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="blog-data-card">
+        <div className="blog-data-card-title">
+          <BlogDownloadIcon size={18} />
+          导出远程格式
+        </div>
+        <p style={{ fontSize: 13, color: 'var(--blog-text-secondary)', lineHeight: 1.8, margin: '0 0 16px 0' }}>
+          把当前本地所有文章、图片和附件导出为一个 JSON 文件。这个文件格式与远程数据源格式完全一致，
+          可直接上传到 GitHub Gist 等平台作为远程数据源。
+        </p>
+        <button className="blog-btn blog-btn-primary" onClick={onExport}>
+          📤 导出数据（远程格式）
+        </button>
+      </div>
+
+      <div className="blog-data-card">
+        <div className="blog-data-card-title">
+          <BlogLightbulbIcon size={18} />
+          使用说明
+        </div>
+        <ol style={{ fontSize: 13, color: 'var(--blog-text-secondary)', lineHeight: 2, margin: 0, paddingLeft: 20 }}>
+          <li>在「文章管理」中写好文章，上传图片/附件</li>
+          <li>点击上方「导出数据（远程格式）」，得到一个 JSON 文件</li>
+          <li>把 JSON 文件上传到 GitHub Gist 或其他支持 raw 链接的地方</li>
+          <li>把 raw 链接粘贴到上方输入框，点击「保存设置」</li>
+          <li>点击「立即同步」测试一下，访客访问首页时就会自动从远程加载</li>
+        </ol>
+      </div>
+    </div>
+  );
+}
+
+const BlogGlobeIcon = ({ size = 18, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10"/>
+    <line x1="2" y1="12" x2="22" y2="12"/>
+    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+  </svg>
+);
+
+const BlogLightbulbIcon = ({ size = 18, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M9 18h6"/>
+    <path d="M10 22h4"/>
+    <path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/>
+  </svg>
+);
+
+// 数据管理面板组件
+function BlogDataPanel({ storageInfo, onExport, onImport, onClear, onRefresh }) {
+  if (!storageInfo) {
+    return (
+      <div style={{ padding: '60px 0', textAlign: 'center', color: 'var(--blog-text-tertiary)' }}>
+        加载中...
+      </div>
+    );
+  }
+
+  const usagePercent = Math.min(100, Math.round(storageInfo.mb / storageInfo.estimatedLimit * 100));
+  const usageColor = usagePercent > 80 ? 'var(--blog-rose-500)'
+    : usagePercent > 60 ? 'var(--blog-caramel-500)'
+    : 'var(--blog-forest-500)';
+
+  return (
+    <div className="blog-data-panel">
+      {/* 存储概览 */}
+      <div className="blog-data-card">
+        <div className="blog-data-card-title">
+          <BlogDatabaseIcon size={18} />
+          存储概览
+          <button
+            className="blog-btn blog-btn-secondary blog-btn-sm"
+            style={{ marginLeft: 'auto' }}
+            onClick={onRefresh}
+          >
+            刷新
+          </button>
+        </div>
+        <div className="blog-stats-grid">
+          <div className="blog-stat-item">
+            <div className="blog-stat-value">{storageInfo.articlesCount}</div>
+            <div className="blog-stat-label">篇文章</div>
+          </div>
+          <div className="blog-stat-item">
+            <div className="blog-stat-value">{storageInfo.filesCount}</div>
+            <div className="blog-stat-label">个文件</div>
+          </div>
+          <div className="blog-stat-item">
+            <div className="blog-stat-value">{storageInfo.mb.toFixed(2)} MB</div>
+            <div className="blog-stat-label">已用空间</div>
+          </div>
+          <div className="blog-stat-item">
+            <div className="blog-stat-value">
+              {storageInfo.hasRealEstimate ? storageInfo.estimatedLimit + ' MB' : storageInfo.estimatedLimit + ' MB+'}
+            </div>
+            <div className="blog-stat-label">
+              {storageInfo.hasRealEstimate ? '可用容量' : '预估容量'}
+            </div>
+          </div>
+        </div>
+        <div style={{ marginTop: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--blog-text-secondary)', marginBottom: 6 }}>
+            <span>空间使用率</span>
+            <span>{usagePercent}%</span>
+          </div>
+          <div style={{
+            height: 12,
+            background: 'var(--blog-cream-200)',
+            borderRadius: 'var(--blog-radius-full)',
+            overflow: 'hidden',
+          }}>
+            <div style={{
+              width: usagePercent + '%',
+              height: '100%',
+              background: usageColor,
+              borderRadius: 'var(--blog-radius-full)',
+              transition: 'width 0.5s ease',
+            }} />
+          </div>
+          {storageInfo.isLegacy && (
+            <div style={{ marginTop: 8, fontSize: 12, color: 'var(--blog-caramel-600)' }}>
+              ⚠️ 当前使用 localStorage 模式（容量有限），建议使用支持 IndexedDB 的现代浏览器
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* 数据操作 */}
+      <div className="blog-data-card">
+        <div className="blog-data-card-title">
+          <BlogDownloadIcon size={18} />
+          数据操作
+        </div>
+        <div className="blog-data-actions">
+          <button className="blog-data-action-btn" onClick={onExport}>
+            <div className="blog-data-action-icon">📤</div>
+            <div>
+              <div className="blog-data-action-title">导出数据</div>
+              <div className="blog-data-action-desc">导出所有文章、图片和设置为 JSON 备份文件</div>
+            </div>
+            <BlogChevronRightIcon size={18} style={{ marginLeft: 'auto', color: 'var(--blog-text-tertiary)' }} />
+          </button>
+          <button className="blog-data-action-btn" onClick={onImport}>
+            <div className="blog-data-action-icon">📥</div>
+            <div>
+              <div className="blog-data-action-title">导入数据</div>
+              <div className="blog-data-action-desc">从 JSON 备份文件恢复所有数据（覆盖现有）</div>
+            </div>
+            <BlogChevronRightIcon size={18} style={{ marginLeft: 'auto', color: 'var(--blog-text-tertiary)' }} />
+          </button>
+          <button className="blog-data-action-btn blog-data-action-btn-danger" onClick={onClear}>
+            <div className="blog-data-action-icon">🗑️</div>
+            <div>
+              <div className="blog-data-action-title">清空所有数据</div>
+              <div className="blog-data-action-desc">删除所有文章、文件，恢复默认设置</div>
+            </div>
+            <BlogChevronRightIcon size={18} style={{ marginLeft: 'auto', color: 'var(--blog-rose-400)' }} />
+          </button>
+        </div>
+      </div>
+
+      {/* 说明 */}
+      <div className="blog-data-card">
+        <div className="blog-data-card-title">
+          <BlogInfoIcon size={18} />
+          关于存储
+        </div>
+        <div style={{ fontSize: 13, color: 'var(--blog-text-secondary)', lineHeight: 1.8 }}>
+          <p>• 本博客使用浏览器内置的 <strong>IndexedDB</strong> 数据库存储所有数据，容量通常可达几百 MB 到几 GB。</p>
+          <p>• 数据保存在你当前使用的浏览器中，不同浏览器/设备之间不共享。</p>
+          <p>• 清除浏览器数据会删除所有博客内容，建议定期使用「导出数据」功能备份。</p>
+          <p>• 单文件上传上限为 50MB，图片上传后会自动压缩（最大宽度 1200px）。</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const BlogDatabaseIcon = ({ size = 18, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <ellipse cx="12" cy="5" rx="9" ry="3"/>
+    <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/>
+    <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
+  </svg>
+);
+
+const BlogDownloadIcon = ({ size = 18, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+    <polyline points="7 10 12 15 17 10"/>
+    <line x1="12" y1="15" x2="12" y2="3"/>
+  </svg>
+);
+
+const BlogInfoIcon = ({ size = 18, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10"/>
+    <line x1="12" y1="16" x2="12" y2="12"/>
+    <line x1="12" y1="8" x2="12.01" y2="8"/>
+  </svg>
+);
+
+window.BlogAdminPage = BlogAdminPage;

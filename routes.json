@@ -1,0 +1,12 @@
+[
+  {
+    "path": "/",
+    "file": "index.html",
+    "name": "PawAdmin · 私有管理后台"
+  },
+  {
+    "path": "/discover",
+    "file": "discover.html",
+    "name": "PawDiscover · 爪印发现"
+  }
+]

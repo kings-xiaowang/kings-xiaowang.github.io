@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="creative-medium" content="interactive-prototype" />
+  <title>PawBlog · 爪印博客</title>
+  <link rel="stylesheet" href="src/blog/blog-styles.css" />
+  <link rel="icon" type="image/png" href="/spark/app/app_17dze11t10r/runtime/api/v1/storage/object/bucket_aadkuvmen5eoi_static/static%2Faadkuu2mle6bo_ve_miaoda" />
+  <link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=Fredoka:wght@400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" />
+</head>
+<body>
+  <div id="root"></div>
+
+  <script src="https://sf3-scmcdn-cn.feishucdn.com/obj/feishu-static/miaoda/coding-unpkg-sdk/react@18.3.1/umd/react.production.min.js" crossorigin="anonymous"></script>
+  <script src="https://sf3-scmcdn-cn.feishucdn.com/obj/feishu-static/miaoda/coding-unpkg-sdk/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin="anonymous"></script>
+  <script src="https://sf3-scmcdn-cn.feishucdn.com/obj/feishu-static/miaoda/coding-unpkg-sdk/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
+
+  <!-- 全局错误捕获（最优先加载） -->
+  <script src="src/blog/blog-error-handler.js"></script>
+
+  <!-- 数据层（先加载，JS 直接执行） -->
+  <script src="src/blog/blog-db-indexeddb.js"></script>
+  <script src="src/blog/blog-remote.js"></script>
+  <script src="src/blog/blog-utils.js"></script>
+
+  <!-- 图标组件 -->
+  <script type="text/babel" src="src/blog/blog-icons.jsx"></script>
+
+  <!-- 页面组件 -->
+  <script type="text/babel" src="src/blog/pages/BlogHome.jsx"></script>
+  <script type="text/babel" src="src/blog/pages/BlogPost.jsx"></script>
+  <script type="text/babel" src="src/blog/pages/BlogAbout.jsx"></script>
+  <script type="text/babel" src="src/blog/pages/BlogPostEditor.jsx"></script>
+  <script type="text/babel" src="src/blog/pages/BlogAdmin.jsx"></script>
+
+  <!-- 主应用（最后加载） -->
+  <script type="text/babel" src="src/blog/BlogApp.jsx"></script>
+</body>
+</html>
