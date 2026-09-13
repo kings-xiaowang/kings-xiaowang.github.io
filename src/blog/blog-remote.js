@@ -119,6 +119,12 @@ const PawRemote = (function () {
           throw new Error('数据格式不正确');
         }
 
+        // 调试输出：加载到的文章数量和每篇标题
+        console.log(`[PawRemote] 远程数据加载成功，共 ${data.articles.length} 篇文章：`);
+        data.articles.forEach((a, i) => {
+          console.log(`  [${i + 1}] ${a.title || '(无标题)'} (id: ${a.id})`);
+        });
+
         remoteData = data;
         remoteLoaded = true;
         return { success: true, data, error: null };
@@ -561,9 +567,13 @@ const PawRemote = (function () {
       };
       await setLastPushToGist(pushInfo);
 
-      // 如果不是静默模式，顺便刷新远程缓存
-      if (!options.silent) {
+      // 同步成功后立即刷新远程缓存，确保首页等公开页面下次读取到最新数据
+      try {
         clearRemoteCache();
+        await loadRemoteData({ force: true });
+        console.log(`[PawRemote] 同步到 Gist 成功，已刷新本地缓存，共 ${pushInfo.articleCount} 篇文章`);
+      } catch (refreshErr) {
+        console.warn('[PawRemote] 同步成功，但刷新缓存失败:', refreshErr);
       }
 
       return pushInfo;

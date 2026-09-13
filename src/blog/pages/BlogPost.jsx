@@ -15,42 +15,63 @@ function BlogPostPage({ postId, onNavigate, usingRemote }) {
 
   React.useEffect(() => {
     if (post && contentRef.current) {
-      if (usingRemote) {
-        // 远程数据：从文章本身的 files 数组里找
+      // 文章对象带 files 数组 → 远程数据来源
+      if (Array.isArray(post.files) && post.files.length > 0) {
         PawRemote.resolveRemoteFileElements(contentRef.current, post);
       } else {
         // 本地数据：从 IndexedDB 找
         blogResolveFileElements(contentRef.current);
       }
     }
-  }, [post, usingRemote]);
+  }, [post]);
 
   const loadPost = async () => {
     setLoading(true);
+    setNotFound(false);
     try {
-      if (usingRemote) {
-        const p = PawRemote.getRemoteArticleById(postId);
-        if (!p || p.published === false) {
-          setNotFound(true);
-          setLoading(false);
-          return;
+      await PawDB.ensureReady();
+
+      let p = null;
+      let adj = { prev: null, next: null };
+      let foundRemote = false;
+
+      // 优先从远程加载
+      try {
+        // 确保远程数据已加载（有缓存就用缓存，没有就拉一次）
+        await PawRemote.loadRemoteData({ force: false });
+        p = PawRemote.getRemoteArticleById(postId);
+        if (p && p.published !== false) {
+          adj = PawRemote.getRemoteAdjacentArticles(postId);
+          foundRemote = true;
+          console.log(`[BlogPost] 从远程 Gist 加载文章: ${p.title}`);
         }
-        setPost(p);
-        setAdjacent(PawRemote.getRemoteAdjacentArticles(postId));
-      } else {
-        await PawDB.ensureReady();
-        const p = await PawDB.getArticleById(postId);
-        if (!p || p.published === false) {
-          setNotFound(true);
-          setLoading(false);
-          return;
-        }
-        setPost(p);
-        setAdjacent(await PawDB.getAdjacentArticles(postId));
+      } catch (remoteErr) {
+        console.warn('[BlogPost] 远程加载失败，尝试本地:', remoteErr.message);
       }
+
+      // 远程没找到，降级到本地
+      if (!foundRemote) {
+        p = await PawDB.getArticleById(postId);
+        if (p && p.published !== false) {
+          adj = await PawDB.getAdjacentArticles(postId);
+          console.log(`[BlogPost] 从本地 IndexedDB 加载文章: ${p.title}`);
+        } else {
+          p = null;
+        }
+      }
+
+      if (!p) {
+        setNotFound(true);
+        setLoading(false);
+        return;
+      }
+
+      setPost(p);
+      setAdjacent(adj);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (e) {
       console.warn('[BlogPost] 加载失败:', e);
+      setNotFound(true);
     } finally {
       setLoading(false);
     }
