@@ -177,7 +177,7 @@ const PawRemote = (function () {
     if (!remoteData) return null;
     const b = remoteData.blog || {};
     return {
-      title: b.title || 'PawBlog',
+      title: b.title || 'kings小wang的个人博客',
       subtitle: b.subtitle || '',
       author: b.author || '小狐狸',
       avatar: b.avatar || 'preset:fox',
@@ -218,7 +218,7 @@ const PawRemote = (function () {
 
     const articles = await PawDB.getArticles(false); // 全部（含草稿）
     const admin = await PawDB.getAdminPublic();
-    const siteName = await PawDB.getSetting('siteName', 'PawBlog');
+    const siteName = await PawDB.getSetting('siteName', 'kings小wang的个人博客');
     const siteSubtitle = await PawDB.getSetting('siteSubtitle', '');
 
     // 每篇文章附带其文件
@@ -264,7 +264,7 @@ const PawRemote = (function () {
       blog: {
         title: siteName,
         subtitle: siteSubtitle,
-        author: admin?.nickname || '狐小爪',
+        author: admin?.nickname || 'kings小wang',
         avatar: admin?.avatar || 'preset:fox',
         bio: admin?.bio || '',
         location: admin?.location || '',

@@ -249,13 +249,13 @@ const PawDB = (function () {
         id: 'admin_01',
         username: 'admin',
         password: hashPassword('admin123'),
-        nickname: '狐小爪',
+        nickname: 'kings小wang',
         avatar: 'preset:fox',
-        bio: '一只热爱开源和写作的小狐狸 🦊 喜欢用毛茸茸的方式记录技术与生活。',
+        bio: '热爱开源和写作，喜欢用毛茸茸的方式记录技术与生活。',
         location: '森林小屋',
-        email: 'hi@pawblog.dev',
-        blog: 'pawblog.dev',
-        github: 'https://github.com/foxiepaws',
+        email: 'hi@kingswang.blog',
+        blog: 'kingswang.blog',
+        github: 'https://github.com/kingsxiaowang',
         skills: ['前端开发', 'React', 'Vue', 'CSS', 'UI设计', 'furry文化', '写作'],
         siteCreatedAt: Date.now() - 86400000 * 365,
       });
@@ -266,9 +266,9 @@ const PawDB = (function () {
       const posts = [
         {
           id: 'post_welcome',
-          title: '欢迎来到 PawBlog · 爪印博客',
-          excerpt: '这里是一只小狐狸的技术与生活笔记。在这里，我会分享前端开发的心得、毛茸茸的设计灵感，以及森林里的日常故事…',
-          content: '# 欢迎来到 PawBlog 🦊\n\n你好呀！我是狐小爪，一只热爱代码和毛茸茸文化的小狐狸。\n\n这里是我的个人博客，记录我在**前端开发**、**UI 设计**和**日常生活**中的点点滴滴。\n\n## 你会在这里找到什么\n\n- 🎨 **设计笔记**：关于毛茸茸风格 UI 的探索与实践\n- 💻 **技术文章**：前端开发中的踩坑与心得\n- 🌿 **生活随笔**：森林小屋的日常碎碎念\n- 🐾 **furry 文化**：关于 furry fandom 的思考\n\n## 为什么叫 PawBlog\n\n爪印（Paw）是每个毛茸茸角色最可爱的标志之一。每一篇文章就像一个爪印，\n一步一步，走出属于自己的路。\n\n> 愿每一个爪印，都踩在热爱的土地上。\n\n希望你在这里能找到有意思的东西～ 记得常来玩呀！',
+          title: '欢迎来到 kings小wang的个人博客',
+          excerpt: '这里是一个记录生活与代码的毛茸茸角落。在这里，我会分享前端开发的心得、毛茸茸的设计灵感，以及日常生活里的点点滴滴…',
+          content: '# 欢迎来到 kings小wang的个人博客 🦊\n\n你好呀！欢迎来到我的小窝～ 这里是一个记录**生活**与**代码**的毛茸茸角落。\n\n我是这里的主人，一只热爱代码和毛茸茸文化的小狐狸。\n\n## 你会在这里找到什么\n\n- 🎨 **设计笔记**：关于毛茸茸风格 UI 的探索与实践\n- 💻 **技术文章**：前端开发中的踩坑与心得\n- 🌿 **生活随笔**：森林小屋的日常碎碎念\n- 🐾 **furry 文化**：关于 furry fandom 的思考\n\n## 关于这个博客\n\n这里就像一本在线的笔记本，记录着我一路走来的点点滴滴。\n无论是技术上的收获，还是生活中的小确幸，都想在这里留下痕迹。\n\n> 愿每一个爪印，都踩在热爱的土地上。\n\n希望你在这里能找到有意思的东西～ 记得常来玩呀！',
           category: '随笔',
           tags: ['furry', '博客', '介绍'],
           createdAt: now - 86400000 * 30,
@@ -305,9 +305,9 @@ const PawDB = (function () {
 
     // 设置
     const s1 = await _getSetting('siteName');
-    if (s1 == null) await _saveSettingRaw('siteName', 'PawBlog');
+    if (s1 == null) await _saveSettingRaw('siteName', 'kings小wang的个人博客');
     const s2 = await _getSetting('siteSubtitle');
-    if (s2 == null) await _saveSettingRaw('siteSubtitle', '一只小狐狸的技术与生活笔记');
+    if (s2 == null) await _saveSettingRaw('siteSubtitle', '记录生活与代码的毛茸茸角落');
     const s3 = await _getSetting('theme');
     if (s3 == null) await _saveSettingRaw('theme', 'caramel');
   }
