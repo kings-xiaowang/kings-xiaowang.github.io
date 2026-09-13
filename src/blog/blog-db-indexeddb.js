@@ -567,12 +567,8 @@ const PawDB = (function () {
       lsSet(LS_KEYS.SETTINGS, obj);
       return;
     }
-    try {
-      const store = idbTx(STORES.SETTINGS, 'readwrite');
-      await idbPromisify(store.put({ key, value }));
-    } catch (e) {
-      console.warn('[PawDB] saveSetting 失败:', e);
-    }
+    const store = idbTx(STORES.SETTINGS, 'readwrite');
+    await idbPromisify(store.put({ key, value }));
   }
 
   async function _clearAll() {

@@ -54,9 +54,11 @@ const PawRemote = (function () {
       // 如果和默认值一样，存空字符串（表示使用默认），这样未来默认值更新时能自动跟随
       const normalized = url === DEFAULT_REMOTE_DATA_URL ? '' : (url || '');
       await PawDB.putSetting(SETTING_KEY, normalized);
-      return true;
+      console.log('[PawRemote] 远程数据源 URL 已保存:', normalized || '(默认值)');
+      return { success: true };
     } catch (e) {
-      return false;
+      console.error('[PawRemote] 保存远程 URL 失败:', e);
+      return { success: false, error: e.message || '保存失败' };
     }
   }
 
@@ -411,11 +413,18 @@ const PawRemote = (function () {
   }
 
   async function setGithubToken(token) {
-    return PawDB.putSetting(SETTING_GITHUB_TOKEN, token || '');
+    try {
+      await PawDB.putSetting(SETTING_GITHUB_TOKEN, token || '');
+      console.log('[PawRemote] GitHub Token 已保存:', token ? '已配置' : '已清空');
+      return { success: true };
+    } catch (e) {
+      console.error('[PawRemote] 保存 GitHub Token 失败:', e);
+      return { success: false, error: e.message || '保存失败' };
+    }
   }
 
   async function clearGithubToken() {
-    return PawDB.putSetting(SETTING_GITHUB_TOKEN, '');
+    return setGithubToken('');
   }
 
   async function hasGithubToken() {

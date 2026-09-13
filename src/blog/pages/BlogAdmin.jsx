@@ -206,16 +206,20 @@ function BlogAdminPage({ onNavigate }) {
       setRemoteStatus({ type: 'error', message: 'URL 必须以 http:// 或 https:// 开头' });
       return;
     }
-    const ok = await PawRemote.setRemoteUrl(url);
-    if (ok) {
+    const result = await PawRemote.setRemoteUrl(url);
+    if (result && result.success) {
       setRemoteUrlState(url);
-      setRemoteStatus({ type: 'success', message: '数据源地址已保存' });
+      setRemoteStatus({ type: 'success', message: '✓ 数据源地址已保存' });
       // 清空上次同步状态
       setLastSync(null);
       setRemoteArticleCount(0);
       PawRemote.clearRemoteCache();
+      // 刷新 Gist 信息解析
+      const gi = await PawRemote.getGistInfo();
+      setGistInfo(gi);
     } else {
-      setRemoteStatus({ type: 'error', message: '保存失败' });
+      const errMsg = (result && result.error) || '未知错误';
+      setRemoteStatus({ type: 'error', message: '保存失败：' + errMsg });
     }
   };
 
@@ -304,28 +308,32 @@ function BlogAdminPage({ onNavigate }) {
       setRemoteStatus({ type: 'error', message: '请输入 GitHub Personal Access Token' });
       return;
     }
-    const ok = await PawRemote.setGithubToken(token);
-    if (ok) {
+    const result = await PawRemote.setGithubToken(token);
+    if (result && result.success) {
       setHasToken(true);
       setGithubTokenState(token);
       setGithubTokenInput('');
-      setRemoteStatus({ type: 'success', message: 'GitHub Token 已保存' });
+      setRemoteStatus({ type: 'success', message: '✓ GitHub Token 已保存' });
       // 刷新 Gist 信息
       const gi = await PawRemote.getGistInfo();
       setGistInfo(gi);
     } else {
-      setRemoteStatus({ type: 'error', message: '保存失败' });
+      const errMsg = (result && result.error) || '未知错误';
+      setRemoteStatus({ type: 'error', message: '保存失败：' + errMsg });
     }
   };
 
   const handleClearGithubToken = async () => {
     if (!confirm('确定要清除 GitHub Token 吗？清除后将无法自动同步到 Gist。')) return;
-    const ok = await PawRemote.clearGithubToken();
-    if (ok) {
+    const result = await PawRemote.clearGithubToken();
+    if (result && result.success) {
       setHasToken(false);
       setGithubTokenState('');
       setGithubTokenInput('');
       setRemoteStatus({ type: 'success', message: 'Token 已清除' });
+    } else {
+      const errMsg = (result && result.error) || '未知错误';
+      setRemoteStatus({ type: 'error', message: '清除失败：' + errMsg });
     }
   };
 
@@ -781,12 +789,39 @@ function BlogRemotePanel({
           </label>
           <input
             className="blog-form-input"
-            type="text"
+            type="url"
             value={remoteUrlInput}
             onChange={(e) => setRemoteUrlInput(e.target.value)}
-            style={isUsingDefault ? { color: 'var(--blog-text-secondary)' } : {}}
+            style={{
+              ...(isUsingDefault ? { color: 'var(--blog-text-secondary)' } : {}),
+              fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
+              fontSize: 13,
+              overflowX: 'auto',
+              whiteSpace: 'nowrap'
+            }}
             placeholder="https://gist.githubusercontent.com/xxx/raw/blog-data.json"
+            spellCheck={false}
+            autoComplete="off"
           />
+          {remoteUrlInput && (
+            <div style={{
+              marginTop: 8,
+              padding: '8px 12px',
+              backgroundColor: 'var(--blog-cream-50)',
+              border: '1px solid var(--blog-cream-200)',
+              borderRadius: 8,
+              fontSize: 12,
+              fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
+              color: 'var(--blog-text-secondary)',
+              wordBreak: 'break-all',
+              lineHeight: 1.6
+            }}>
+              <div style={{ marginBottom: 4, fontWeight: 600, color: 'var(--blog-text-tertiary)', fontFamily: 'system-ui, sans-serif' }}>
+                完整 URL：
+              </div>
+              {remoteUrlInput}
+            </div>
+          )}
           <div style={{ marginTop: 8, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <button className="blog-btn blog-btn-primary" onClick={onSave}>
               保存设置
