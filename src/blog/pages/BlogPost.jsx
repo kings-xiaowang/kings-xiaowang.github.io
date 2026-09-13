@@ -139,7 +139,7 @@ function BlogPostPage({ postId, onNavigate, usingRemote }) {
           {blogGetAvatarEmoji(admin?.avatar)}
         </div>
         <div className="blog-author-info">
-          <div className="blog-author-name">{admin?.nickname || '狐小爪'}</div>
+          <div className="blog-author-name">{admin?.nickname || 'kings小wang'}</div>
           <div className="blog-author-bio">
             {admin?.bio || '一只热爱代码和毛茸茸文化的小狐狸。'}
           </div>

@@ -16,6 +16,26 @@ function BlogAdminPage({ onNavigate }) {
   const [importInput, setImportInput] = React.useState(null);
   const fileInputRef = React.useRef(null);
 
+  // 导出网站源码
+  const [exportingWebsite, setExportingWebsite] = React.useState(false);
+  const [exportedWebsiteInfo, setExportedWebsiteInfo] = React.useState(null);
+
+  const handleExportWebsite = async () => {
+    setExportingWebsite(true);
+    setExportedWebsiteInfo(null);
+    blogShowToast('正在打包网站源码...', 'info');
+    try {
+      const result = await PawExport.exportWebsite();
+      setExportedWebsiteInfo(result);
+      blogShowToast(`导出成功，共 ${result.fileCount} 个文件`, 'success');
+    } catch (err) {
+      console.error('导出网站失败:', err);
+      blogShowToast('导出失败: ' + err.message, 'error');
+    } finally {
+      setExportingWebsite(false);
+    }
+  };
+
   // 数据源设置相关
   const [remoteUrl, setRemoteUrlState] = React.useState('');
   const [remoteUrlInput, setRemoteUrlInput] = React.useState('');
@@ -268,7 +288,7 @@ function BlogAdminPage({ onNavigate }) {
                 <BlogPawIcon size={28} color="white" />
               </div>
               <div className="blog-login-title">管理后台</div>
-              <div className="blog-login-subtitle">PawBlog · 爪印博客</div>
+              <div className="blog-login-subtitle">kings小wang的个人博客</div>
             </div>
 
             <form onSubmit={handleLogin}>
@@ -436,6 +456,9 @@ function BlogAdminPage({ onNavigate }) {
           onImport={handleImportClick}
           onClear={() => setShowConfirmClear(true)}
           onRefresh={loadStorageInfo}
+          onExportWebsite={handleExportWebsite}
+          exportingWebsite={exportingWebsite}
+          exportedWebsiteInfo={exportedWebsiteInfo}
         />
       )}
 
@@ -649,7 +672,7 @@ const BlogLightbulbIcon = ({ size = 18, color = 'currentColor' }) => (
 );
 
 // 数据管理面板组件
-function BlogDataPanel({ storageInfo, onExport, onImport, onClear, onRefresh }) {
+function BlogDataPanel({ storageInfo, onExport, onImport, onClear, onRefresh, onExportWebsite, exportingWebsite, exportedWebsiteInfo }) {
   if (!storageInfo) {
     return (
       <div style={{ padding: '60px 0', textAlign: 'center', color: 'var(--blog-text-tertiary)' }}>
@@ -761,6 +784,39 @@ function BlogDataPanel({ storageInfo, onExport, onImport, onClear, onRefresh }) 
         </div>
       </div>
 
+      {/* 部署导出 */}
+      <div className="blog-data-card">
+        <div className="blog-data-card-title">
+          <BlogPackageIcon size={18} />
+          部署到 GitHub Pages
+        </div>
+        <div style={{ fontSize: 13, color: 'var(--blog-text-secondary)', lineHeight: 1.8, marginBottom: 14 }}>
+          把完整的网站源码打包成 ZIP，下载后上传到 GitHub 仓库即可部署到 GitHub Pages。
+          支持 <code style={{
+            background: 'var(--blog-cream-100)',
+            padding: '2px 6px',
+            borderRadius: '4px',
+            fontSize: 12,
+          }}>username.github.io</code> 和普通仓库子路径。
+        </div>
+        <button
+          className="blog-btn blog-btn-primary"
+          onClick={onExportWebsite}
+          disabled={exportingWebsite}
+        >
+          {exportingWebsite ? '📦 正在打包...' : '📦 导出网站源码 (ZIP)'}
+        </button>
+        {exportedWebsiteInfo && (
+          <div style={{
+            marginTop: 12,
+            fontSize: 12,
+            color: 'var(--blog-forest-600)',
+          }}>
+            ✅ 打包完成，共 {exportedWebsiteInfo.fileCount} 个文件，大小 {PawDB.formatFileSize(exportedWebsiteInfo.size)}
+          </div>
+        )}
+      </div>
+
       {/* 说明 */}
       <div className="blog-data-card">
         <div className="blog-data-card-title">
@@ -799,6 +855,15 @@ const BlogInfoIcon = ({ size = 18, color = 'currentColor' }) => (
     <circle cx="12" cy="12" r="10"/>
     <line x1="12" y1="16" x2="12" y2="12"/>
     <line x1="12" y1="8" x2="12.01" y2="8"/>
+  </svg>
+);
+
+const BlogPackageIcon = ({ size = 18, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M16.5 9.4L7.55 4.24"/>
+    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+    <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+    <line x1="12" y1="22.08" x2="12" y2="12"/>
   </svg>
 );
 

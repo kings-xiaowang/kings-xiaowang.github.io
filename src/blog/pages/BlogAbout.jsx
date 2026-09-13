@@ -79,7 +79,7 @@ function BlogAboutPage({ usingRemote }) {
         <div className="blog-about-avatar">
           {blogGetAvatarEmoji(admin?.avatar)}
         </div>
-        <h1 className="blog-about-name">{admin?.nickname || '狐小爪'}</h1>
+        <h1 className="blog-about-name">{admin?.nickname || 'kings小wang'}</h1>
         <p className="blog-about-bio">
           {admin?.bio || '一只热爱代码和毛茸茸文化的小狐狸。'}
         </p>
@@ -130,7 +130,7 @@ function BlogAboutPage({ usingRemote }) {
         <div style={{ marginBottom: 6 }}>
           <BlogPawIcon size={16} color="var(--blog-caramel-400)" />
         </div>
-        <div>PawBlog · 爪印博客</div>
+        <div>kings小wang的个人博客</div>
         <div style={{ marginTop: 4 }}>{siteAge()} · 自 {blogFormatDate(siteCreatedAt)}</div>
       </div>
     </div>

@@ -58,8 +58,8 @@ function BlogHomePage({ onNavigate, usingRemote }) {
     return list;
   }, [posts, activeCategory, searchQuery]);
 
-  const siteName = remoteBlogInfo?.title || 'PawBlog';
-  const siteSubtitle = remoteBlogInfo?.subtitle || '一只小狐狸的技术与生活笔记';
+  const siteName = remoteBlogInfo?.title || 'kings小wang的个人博客';
+  const siteSubtitle = remoteBlogInfo?.subtitle || '记录生活与代码的毛茸茸角落';
 
   if (loading) {
     return (
@@ -78,11 +78,11 @@ function BlogHomePage({ onNavigate, usingRemote }) {
         <div className="blog-hero-avatar">
           {blogGetAvatarEmoji(admin?.avatar)}
         </div>
-        <h1 className="blog-hero-title">{siteName} · 爪印博客</h1>
+        <h1 className="blog-hero-title">{siteName}</h1>
         <p className="blog-hero-subtitle">{siteSubtitle}</p>
         <div className="blog-hero-author">
           <BlogPawIcon size={14} />
-          <span>{admin?.nickname || '狐小爪'}</span>
+          <span>{admin?.nickname || 'kings小wang'}</span>
         </div>
       </section>
 

@@ -66,8 +66,8 @@ function BlogApp() {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   const [loggedIn, setLoggedIn] = React.useState(false);
   const [initialized, setInitialized] = React.useState(false);
-  const [siteName, setSiteName] = React.useState('PawBlog');
-  const [adminNickname, setAdminNickname] = React.useState('狐小爪');
+  const [siteName, setSiteName] = React.useState('kings小wang的个人博客');
+  const [adminNickname, setAdminNickname] = React.useState('kings小wang');
 
   // 远程数据相关
   const [remoteLoading, setRemoteLoading] = React.useState(false);
@@ -108,7 +108,7 @@ function BlogApp() {
   const initApp = async () => {
     try {
       await PawDB.init();
-      const name = await PawDB.getSetting('siteName', 'PawBlog');
+      const name = await PawDB.getSetting('siteName', 'kings小wang的个人博客');
       setSiteName(name);
       const admin = await PawDB.getAdminPublic();
       if (admin) setAdminNickname(admin.nickname);
@@ -143,7 +143,7 @@ function BlogApp() {
         setUsingRemote(false);
         setRemoteError(result.error || '远程数据加载失败');
         // 用回本地站点名
-        const name = await PawDB.getSetting('siteName', 'PawBlog');
+        const name = await PawDB.getSetting('siteName', 'kings小wang的个人博客');
         setSiteName(name);
       }
     } catch (e) {
@@ -205,7 +205,7 @@ function BlogApp() {
           React.createElement('div', { className: 'blog-logo-icon' },
             React.createElement(BlogPawIcon, { size: 22, color: 'white' })
           ),
-          React.createElement('span', { className: 'blog-logo-text' }, siteName || 'PawBlog')
+          React.createElement('span', { className: 'blog-logo-text' }, siteName || 'kings小wang的个人博客')
         ),
 
         React.createElement('nav', { className: `blog-nav ${mobileMenuOpen ? 'mobile-open' : ''}` },
@@ -285,10 +285,10 @@ function BlogApp() {
       React.createElement('div', { className: 'blog-footer-paw' },
         React.createElement(BlogPawIcon, { size: 22 })
       ),
-      React.createElement('div', null, (siteName || 'PawBlog') + ' · 爪印博客'),
+      React.createElement('div', null, siteName || 'kings小wang的个人博客'),
       React.createElement('div', {
         style: { marginTop: '4px', fontSize: '12px', opacity: 0.7 }
-      }, 'Made with 🐾 by ' + (adminNickname || '狐小爪'))
+      }, 'Made with 🐾 by ' + (adminNickname || 'kings小wang'))
     )
   );
 }
