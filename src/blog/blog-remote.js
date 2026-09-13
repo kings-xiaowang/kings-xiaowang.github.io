@@ -1,7 +1,10 @@
 // PawBlog 远程数据源模块
 // 负责：从远程 URL 加载数据、导出符合远程格式的 JSON、远程文章的文件查找
 
-const PawRemote = (function () {
+// 默认远程数据源 URL（内置 Gist，首次访问自动加载）
+  const DEFAULT_REMOTE_DATA_URL = 'https://gist.githubusercontent.com/kings-xiaowang/f8e401d793ecd23ddea9b0a7b7c95585/raw/bceb4a715f1c840b3a976242fdc4773424efad55/blog-data.json';
+
+  const PawRemote = (function () {
   const SETTING_KEY = 'remote_data_url';
   const LAST_SYNC_KEY = 'remote_last_sync';
 
@@ -12,6 +15,18 @@ const PawRemote = (function () {
   let remoteLoadPromise = null;
 
   // ========== 设置相关 ==========
+  // 获取当前生效的远程 URL（用户配置优先，否则用默认值）
+  async function getEffectiveRemoteUrl() {
+    try {
+      const saved = await PawDB.getSetting(SETTING_KEY, '');
+      if (saved && saved.startsWith('http')) return saved;
+      return DEFAULT_REMOTE_DATA_URL;
+    } catch (e) {
+      return DEFAULT_REMOTE_DATA_URL;
+    }
+  }
+
+  // 获取用户实际保存的 URL（空字符串表示未配置，使用默认值）
   async function getRemoteUrl() {
     try {
       return await PawDB.getSetting(SETTING_KEY, '');
@@ -20,13 +35,29 @@ const PawRemote = (function () {
     }
   }
 
+  // 检查当前是否使用的是默认数据源
+  async function isUsingDefault() {
+    try {
+      const saved = await PawDB.getSetting(SETTING_KEY, '');
+      return !saved || !saved.startsWith('http');
+    } catch (e) {
+      return true;
+    }
+  }
+
   async function setRemoteUrl(url) {
     try {
-      await PawDB.putSetting(SETTING_KEY, url || '');
+      // 如果和默认值一样，存空字符串（表示使用默认），这样未来默认值更新时能自动跟随
+      const normalized = url === DEFAULT_REMOTE_DATA_URL ? '' : (url || '');
+      await PawDB.putSetting(SETTING_KEY, normalized);
       return true;
     } catch (e) {
       return false;
     }
+  }
+
+  function getDefaultRemoteUrl() {
+    return DEFAULT_REMOTE_DATA_URL;
   }
 
   async function getLastSyncInfo() {
@@ -53,7 +84,7 @@ const PawRemote = (function () {
 
       try {
         await PawDB.ensureReady();
-        const url = await getRemoteUrl();
+        const url = await getEffectiveRemoteUrl();
 
         if (!url || !url.startsWith('http')) {
           remoteError = '未配置远程数据源';
@@ -324,6 +355,9 @@ const PawRemote = (function () {
   return {
     // 设置
     getRemoteUrl,
+    getEffectiveRemoteUrl,
+    getDefaultRemoteUrl,
+    isUsingDefault,
     setRemoteUrl,
     getLastSyncInfo,
     setLastSyncInfo,

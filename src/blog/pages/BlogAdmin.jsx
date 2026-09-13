@@ -140,11 +140,26 @@ function BlogAdminPage({ onNavigate }) {
   const loadRemoteSettings = async () => {
     const url = await PawRemote.getRemoteUrl();
     setRemoteUrlState(url);
-    setRemoteUrlInput(url);
+    // 未配置时显示默认值
+    setRemoteUrlInput(url || PawRemote.getDefaultRemoteUrl());
     const last = await PawRemote.getLastSyncInfo();
     setLastSync(last);
     if (last?.articleCount != null) {
       setRemoteArticleCount(last.articleCount);
+    }
+  };
+
+  const handleRestoreDefault = async () => {
+    setRemoteUrlInput(PawRemote.getDefaultRemoteUrl());
+    const ok = await PawRemote.setRemoteUrl('');
+    if (ok) {
+      setRemoteUrlState('');
+      setRemoteStatus({ type: 'success', message: '已恢复为默认数据源' });
+      setLastSync(null);
+      setRemoteArticleCount(0);
+      PawRemote.clearRemoteCache();
+    } else {
+      setRemoteStatus({ type: 'error', message: '恢复失败' });
     }
   };
 
@@ -434,7 +449,7 @@ function BlogAdminPage({ onNavigate }) {
         </>
       )}
 
-      {activeTab === 'remote' && (
+        {activeTab === 'remote' && (
         <BlogRemotePanel
           remoteUrl={remoteUrl}
           remoteUrlInput={remoteUrlInput}
@@ -446,6 +461,7 @@ function BlogAdminPage({ onNavigate }) {
           onSave={handleSaveRemoteUrl}
           onSync={handleSyncNow}
           onExport={handleExportRemoteFormat}
+          onRestoreDefault={handleRestoreDefault}
         />
       )}
 
@@ -550,8 +566,10 @@ function BlogRemotePanel({
   onSave,
   onSync,
   onExport,
+  onRestoreDefault,
 }) {
-  const isConfigured = !!remoteUrl;
+  const isConfigured = true; // 总有默认值，所以总是已配置
+  const isUsingDefault = !remoteUrl;
 
   return (
     <div className="blog-data-panel">
@@ -567,12 +585,20 @@ function BlogRemotePanel({
         </p>
 
         <div className="blog-form-group">
-          <label className="blog-form-label">远程数据 URL</label>
+          <label className="blog-form-label">
+            远程数据 URL
+            {isUsingDefault && (
+              <span style={{ marginLeft: 8, fontSize: 12, color: 'var(--blog-caramel-500)', fontWeight: 'normal' }}>
+                （默认数据源）
+              </span>
+            )}
+          </label>
           <input
             className="blog-form-input"
             type="text"
             value={remoteUrlInput}
             onChange={(e) => setRemoteUrlInput(e.target.value)}
+            style={isUsingDefault ? { color: 'var(--blog-text-secondary)' } : {}}
             placeholder="https://gist.githubusercontent.com/xxx/raw/blog-data.json"
           />
           <div style={{ marginTop: 8, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
@@ -586,7 +612,20 @@ function BlogRemotePanel({
             >
               {syncing ? '同步中...' : '🔄 立即同步'}
             </button>
+            <button
+              className="blog-btn blog-btn-ghost"
+              onClick={onRestoreDefault}
+              disabled={isUsingDefault}
+              title="恢复为默认数据源"
+            >
+              ↩️ 恢复默认
+            </button>
           </div>
+          {isUsingDefault && (
+            <p style={{ fontSize: 12, color: 'var(--blog-text-tertiary)', marginTop: 8, marginBottom: 0 }}>
+              当前使用内置默认数据源，你也可以填入自己的 Gist 链接后点击「保存设置」。
+            </p>
+          )}
         </div>
 
         {remoteStatus && (

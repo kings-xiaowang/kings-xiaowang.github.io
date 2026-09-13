@@ -141,15 +141,9 @@ const PawExport = (function () {
   async function collectSiteFiles() {
     const files = [];
 
-    // 1. index.html（去掉 favicon 的绝对路径，用 data URI 版本）
-    const htmlResp = await fetch('index.html', { cache: 'no-store' });
-    let htmlText = await htmlResp.text();
-    // 确保已经是 data URI favicon（保险起见再替换一次）
-    htmlText = htmlText.replace(
-      /<link rel="icon"[^>]*href="\/[^"]*"[^>]*>/,
-      '<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'%23B8743F\'%3E%3Cellipse cx=\'12\' cy=\'16\' rx=\'5\' ry=\'4\'/%3E%3Cellipse cx=\'6\' cy=\'11\' rx=\'2.5\' ry=\'3\'/%3E%3Cellipse cx=\'18\' cy=\'11\' rx=\'2.5\' ry=\'3\'/%3E%3Cellipse cx=\'9\' cy=\'7\' rx=\'2\' ry=\'2.5\'/%3E%3Cellipse cx=\'15\' cy=\'7\' rx=\'2\' ry=\'2.5\'/%3E%3C/svg%3E" />'
-    );
-    files.push({ name: 'index.html', content: htmlText });
+    // 1. 生成 index.html（使用 Babel standalone 运行时编译）
+    const indexHtml = buildIndexHtml();
+    files.push({ name: 'index.html', content: indexHtml });
 
     // 2. 所有 JS / JSX / CSS 文件（从 src 目录读取）
     const srcPaths = [
@@ -160,6 +154,7 @@ const PawExport = (function () {
       'src/blog/blog-utils.js',
       'src/blog/blog-icons.jsx',
       'src/blog/BlogApp.jsx',
+      'src/blog/blog-export.js',
       'src/blog/pages/BlogHome.jsx',
       'src/blog/pages/BlogPost.jsx',
       'src/blog/pages/BlogAbout.jsx',
@@ -174,10 +169,10 @@ const PawExport = (function () {
           const text = await resp.text();
           files.push({ name: path, content: text });
         } else {
-          console.warn('[PawExport] 文件读取失败:', path, resp.status);
+          console.warn('[PawExport] 源文件读取失败:', path, resp.status);
         }
       } catch (e) {
-        console.warn('[PawExport] 文件读取出错:', path, e.message);
+        console.warn('[PawExport] 源文件读取出错:', path, e.message);
       }
     }
 
@@ -186,6 +181,60 @@ const PawExport = (function () {
     files.push({ name: 'README.md', content: readme });
 
     return files;
+  }
+
+  // 构建 index.html（使用 Babel standalone，与项目本地一致）
+  function buildIndexHtml() {
+    const faviconDataUri = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23B8743F'%3E%3Cellipse cx='12' cy='16' rx='5' ry='4'/%3E%3Cellipse cx='6' cy='11' rx='2.5' ry='3'/%3E%3Cellipse cx='18' cy='11' rx='2.5' ry='3'/%3E%3Cellipse cx='9' cy='7' rx='2' ry='2.5'/%3E%3Cellipse cx='15' cy='7' rx='2' ry='2.5'/%3E%3C/svg%3E";
+    const fontCss = 'https://miaoda.feishu.cn/fonts/css2?family=Fredoka:wght@400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap';
+    const reactCdn = 'https://sf3-scmcdn-cn.feishucdn.com/obj/feishu-static/miaoda/coding-unpkg-sdk/react@18.3.1/umd/react.production.min.js';
+    const reactDomCdn = 'https://sf3-scmcdn-cn.feishucdn.com/obj/feishu-static/miaoda/coding-unpkg-sdk/react-dom@18.3.1/umd/react-dom.production.min.js';
+    const babelCdn = 'https://sf3-scmcdn-cn.feishucdn.com/obj/feishu-static/miaoda/coding-unpkg-sdk/@babel/standalone@7.29.0/babel.min.js';
+
+    return `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="creative-medium" content="interactive-prototype" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>kings小wang的个人博客</title>
+  <link rel="stylesheet" href="src/blog/blog-styles.css?v=2" />
+  <link rel="icon" type="image/svg+xml" href="${faviconDataUri}" />
+  <link rel="stylesheet" href="${fontCss}" />
+</head>
+<body>
+  <div id="root"></div>
+
+  <script src="${reactCdn}" crossorigin="anonymous"><\/script>
+  <script src="${reactDomCdn}" crossorigin="anonymous"><\/script>
+  <script src="${babelCdn}" crossorigin="anonymous"><\/script>
+
+  <!-- 全局错误捕获（最优先加载） -->
+  <script src="src/blog/blog-error-handler.js?v=2"><\/script>
+
+  <!-- 数据层（先加载，JS 直接执行） -->
+  <script src="src/blog/blog-db-indexeddb.js?v=2"><\/script>
+  <script src="src/blog/blog-remote.js?v=2"><\/script>
+  <script src="src/blog/blog-export.js?v=2"><\/script>
+  <script src="src/blog/blog-utils.js?v=2"><\/script>
+
+  <!-- 图标组件 -->
+  <script type="text/babel" src="src/blog/blog-icons.jsx?v=2"><\/script>
+
+  <!-- 页面组件 -->
+  <script type="text/babel" src="src/blog/pages/BlogHome.jsx?v=2"><\/script>
+  <script type="text/babel" src="src/blog/pages/BlogPost.jsx?v=2"><\/script>
+  <script type="text/babel" src="src/blog/pages/BlogAbout.jsx?v=2"><\/script>
+  <script type="text/babel" src="src/blog/pages/BlogPostEditor.jsx?v=2"><\/script>
+  <script type="text/babel" src="src/blog/pages/BlogAdmin.jsx?v=2"><\/script>
+
+  <!-- 主应用（最后加载） -->
+  <script type="text/babel" src="src/blog/BlogApp.jsx?v=2"><\/script>
+</body>
+</html>`;
   }
 
   function generateReadme() {
@@ -199,7 +248,7 @@ const PawExport = (function () {
 - 📝 **Markdown 编辑**：支持标题、列表、引用、代码块、链接、图片等
 - 🖼️ **图片上传**：支持图片自动压缩（最大 1200px），附件最大 50MB
 - 💾 **IndexedDB 存储**：大容量本地存储，支持几百 MB ~ 几 GB
-- 🌐 **远程数据源**：可配置 GitHub Gist 等公开 JSON 作为远程数据源
+- 🌐 **远程数据源**：内置默认 Gist 数据源，首次访问自动加载文章
 - 📱 **响应式设计**：适配桌面和移动端
 - 🔐 **管理后台**：内置文章管理、数据管理、数据源设置
 
@@ -223,16 +272,25 @@ const PawExport = (function () {
 5. 等待 1-2 分钟，访问地址为 \`https://你的用户名.github.io/pawblog/\`
    - （路径里的仓库名和你创建的一致）
 
+## 🌐 内置默认数据源
+
+本博客已内置默认远程数据源（GitHub Gist），部署后首次访问会自动从 Gist 加载文章数据，无需手动配置。
+
+- 默认数据源地址：\`https://gist.githubusercontent.com/kings-xiaowang/f8e401d793ecd23ddea9b0a7b7c95585/raw/blog-data.json\`
+- 如果远程加载失败，会降级显示本地示例文章
+- 你可以在管理后台 → **数据源设置** 中修改为自己的 Gist 链接
+- 点击「恢复默认」可以随时切回内置数据源
+
+
 ## 🔑 管理后台
 
 - **入口**：网站右上角的爪印图标，或直接访问 \`#/admin\`
 - **默认账号**：\`admin\` / \`admin123\`
 - 首次登录后建议修改默认密码（可以在 IndexedDB 控制台改，或以后的版本支持前台修改）
 
-## 🌐 配置远程数据源
+## 🌐 配置自己的远程数据源
 
-博客默认把文章存在访客自己浏览器的 IndexedDB 里，每个访客看到的内容是独立的。
-如果想让所有访客看到同样的文章，需要配置远程数据源：
+博客默认从内置的 Gist 数据源加载文章。如果你想发布自己的文章：
 
 1. 在管理后台 → **数据管理** → 点击「导出数据（远程格式）」，下载 JSON 文件
 2. 把这个 JSON 文件上传到 GitHub Gist：https://gist.github.com
@@ -272,7 +330,7 @@ pawblog/
 ## 💡 说明
 
 - 本博客使用 Babel standalone 在浏览器端实时编译 JSX，无需构建工具
-- React、ReactDOM、Babel 通过 CDN 加载，首次访问需要联网
+- React、ReactDOM、Babel 通过 CDN 加载，首次访问需要联网（字体失败会降级到系统字体）
 - 所有数据（文章、图片、设置）默认存储在浏览器本地 IndexedDB
 - 清除浏览器数据会删除所有本地内容，建议定期导出备份
 - 配置远程数据源后，文章内容从远程加载，图片和附件也内嵌在远程 JSON 中
