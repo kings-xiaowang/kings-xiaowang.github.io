@@ -3,18 +3,16 @@
 @import "minimal-mistakes";
 
 @media (min-width: 1024px) {
-  /* 左侧40px触发把手 */
   .drawer-handle{
     position:fixed;
     left:0;
     top:0;
     width:40px;
     height:100vh;
-    background:#161b22;
+    background:#238636;
     border-right:1px solid #30363d;
     z-index: 1001;
   }
-  /* 抽屉面板，默认藏在屏幕外 */
   .slide-sidebar{
     position:fixed;
     top:0;
@@ -32,11 +30,9 @@
   .slide-sidebar.open{
     transform: translateX(0);
   }
-  /* 主内容向右偏移，避开左侧把手 */
   .page__content{
     margin-left:40px;
   }
-  /* 抽屉内链接样式美化 */
   .slide-sidebar a{
     color:#61afef;
     text-decoration:none;
