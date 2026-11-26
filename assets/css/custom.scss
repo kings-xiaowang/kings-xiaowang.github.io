@@ -22,13 +22,13 @@
     background:#161b22;
     z-index:1000;
     padding:1rem;
-    transform: translateX(-100%);
+    transform: translateX(-100%); /* 初始：完全移出屏幕左侧 */
     transition: transform 0.3s ease;
     overflow-y:auto;
     color:#e2e2e2;
   }
   .slide-sidebar.open{
-    transform: translateX(0);
+    transform: translateX(0); /* 打开：归位 */
   }
   .page__content{
     margin-left:40px;
