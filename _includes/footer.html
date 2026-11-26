@@ -1,0 +1,21 @@
+<script>
+// 大屏才启用抽屉
+if(window.innerWidth >= 1024){
+  // 创建触发把手 + 侧边抽屉容器
+  const handle = document.createElement('div');
+  handle.className = "drawer-handle";
+  const drawer = document.createElement('div');
+  drawer.className = "slide-sidebar";
+  // 复制原有侧边栏内容
+  const oldSidebar = document.querySelector('.author-profile');
+  drawer.innerHTML = oldSidebar.innerHTML;
+  document.body.prepend(drawer);
+  document.body.prepend(handle);
+  // 隐藏原生侧边栏
+  oldSidebar.style.display = "none";
+
+  // hover 控制打开关闭
+  handle.addEventListener("mouseenter",()=>drawer.classList.add("open"));
+  drawer.addEventListener("mouseleave",()=>drawer.classList.remove("open"));
+}
+</script>
