@@ -3,14 +3,23 @@
 @import "minimal-mistakes";
 
 @media (min-width: 1024px) {
-  /* 侧边作者面板 */
+  /* 1. 左侧1cm触发条，全屏高度，作为hover触发区域 */
+  .drawer-trigger {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 40px;
+    height: 100vh;
+    z-index: 998;
+  }
+
+  /* 2. 侧边作者面板，默认向左藏，只留一点点触发条 */
   .author-profile {
     position: fixed;
     top: 0;
     left: 0;
     height: 100vh;
     width: 260px;
-    /* 核心：向左移动，只露出40px触发条 */
     transform: translateX(calc(-100% + 40px));
     transition: transform 0.3s ease;
     background: #161b22;
@@ -19,12 +28,17 @@
     overflow: hidden;
   }
 
-  /* 鼠标悬浮，拉回原位，完整展开 */
+  /* 鼠标悬浮到触发条，带动侧边栏滑出 */
+  .drawer-trigger:hover + .author-profile {
+    transform: translateX(0);
+  }
+
+  /* 鼠标悬浮在侧边栏本身，保持展开，防止鼠标移上去直接消失 */
   .author-profile:hover {
     transform: translateX(0);
   }
 
-  /* 内部内容默认微微左移，透明度0 */
+  /* 侧边内部内容 默认隐藏 */
   .author-profile .author__avatar,
   .author-profile .author__content,
   .author-profile .author__urls-wrapper {
@@ -33,7 +47,10 @@
     transition: opacity 0.28s ease, transform 0.28s ease;
   }
 
-  /* hover后内容滑入显示 */
+  /* 展开时内容淡入滑入 */
+  .drawer-trigger:hover + .author-profile .author__avatar,
+  .drawer-trigger:hover + .author-profile .author__content,
+  .drawer-trigger:hover + .author-profile .author__urls-wrapper,
   .author-profile:hover .author__avatar,
   .author-profile:hover .author__content,
   .author-profile:hover .author__urls-wrapper {
@@ -41,7 +58,7 @@
     transform: translateX(0);
   }
 
-  /* 主内容区域，预留40px触发条空间 */
+  /* 主内容区，预留40px空间，不被触发条挡住 */
   .page__content {
     margin-left: 40px;
   }
