@@ -1,0 +1,48 @@
+---
+---
+
+@import "minimal-mistakes";
+
+/* 自定义深色科技风 */
+:root {
+  --primary-color: #4cc9f0;
+  --accent-color: #ff6b9d;
+  --text-color: #e6edf3;
+  --background-color: #0d1117;
+}
+
+body {
+  background-color: var(--background-color);
+  color: var(--text-color);
+}
+
+a {
+  color: var(--primary-color);
+}
+
+a:hover {
+  color: var(--accent-color);
+}
+
+.page-title {
+  color: var(--primary-color);
+  border-bottom: 2px solid var(--primary-color);
+  padding-bottom: 8px;
+}
+
+.author__avatar img {
+  border: 3px solid var(--primary-color);
+  border-radius: 50%;
+}
+
+.btn {
+  background-color: var(--primary-color);
+  color: #000;
+  border-radius: 6px;
+  padding: 6px 12px;
+}
+
+.btn:hover {
+  background-color: var(--accent-color);
+  color: #fff;
+}
