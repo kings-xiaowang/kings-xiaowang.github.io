@@ -2,14 +2,15 @@
 ---
 @import "minimal-mistakes";
 
-/* 桌面大屏生效 */
+/* 只在桌面大屏启用 */
 @media (min-width: 1024px) {
-  #sidebar {
+  /* 作者侧边栏容器 */
+  .author-profile {
     position: fixed;
     top: 0;
     left: 0;
     height: 100vh;
-    width: 40px; /* 左侧常驻触发条 ≈1cm */
+    width: 40px; /* 左侧常驻触发条，≈1cm */
     overflow: hidden;
     background: #161b22;
     border-right: 1px solid #30363d;
@@ -18,30 +19,30 @@
     padding: 1rem 0;
   }
 
-  /* 鼠标悬浮，向右展开 */
-  #sidebar:hover {
+  /* 鼠标悬浮，向右展开完整侧边栏 */
+  .author-profile:hover {
     width: 260px;
   }
 
-  /* 侧边内部内容默认隐藏 */
-  #sidebar .author__avatar,
-  #sidebar .author__content,
-  #sidebar .author__urls-wrapper {
+  /* 内部头像、文字、链接 默认隐藏 */
+  .author-profile .author__avatar,
+  .author-profile .author__content,
+  .author-profile .author__urls-wrapper {
     opacity: 0;
     transform: translateX(-20px);
     transition: opacity 0.28s ease, transform 0.28s ease;
   }
 
-  /* 悬浮时滑入显示 */
-  #sidebar:hover .author__avatar,
-  #sidebar:hover .author__content,
-  #sidebar:hover .author__urls-wrapper {
+  /* 悬浮滑入，显示全部内容 */
+  .author-profile:hover .author__avatar,
+  .author-profile:hover .author__content,
+  .author-profile:hover .author__urls-wrapper {
     opacity: 1;
     transform: translateX(0);
   }
 
-  /* 主内容区留出40px空间，避免被遮挡 */
-  .main__content {
+  /* 主内容向右偏移，给左侧触发条留出位置，不被挡住 */
+  .page__content {
     margin-left: 40px;
   }
 }
