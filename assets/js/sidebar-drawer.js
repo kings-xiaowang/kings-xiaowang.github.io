@@ -1,5 +1,5 @@
-document.addEventListener("DOMContentLoaded", function(){
-  // 防止重复创建
+window.onload = function(){
+  // 去重：如果已经存在把手，直接退出，防止重复创建
   if(document.querySelector('.drawer-handle')) return;
 
   if(window.innerWidth >= 1024){
@@ -25,4 +25,4 @@ document.addEventListener("DOMContentLoaded", function(){
     handle.addEventListener("mouseenter",()=>drawer.classList.add("open"));
     drawer.addEventListener("mouseleave",()=>drawer.classList.remove("open"));
   }
-})
+}
