@@ -6,7 +6,7 @@ window.onload = function(){
     const handle = document.createElement('div');
     const drawer = document.createElement('div');
 
-    // 左侧把手：全屏高度的竖条
+    // 左侧把手：全屏高度竖条
     handle.style.cssText = `
       position:fixed; left:0; top:0; width:40px; height:100vh;
       background:#22272e; border-right:1px solid #30363d;
@@ -21,8 +21,13 @@ window.onload = function(){
       overflow-y:auto; color:#e2e2e2;
     `;
 
+    // 头像紧跟在名字后面，同一行并排
     drawer.innerHTML = `
-      <h2>kings-xiaowang</h2>
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:1rem;">
+        <h2 style="margin:0;">kings-xiaowang</h2>
+        <img src="/assets/images/avatar.png" alt="头像"
+             style="width:48px; height:48px; border-radius:50%; object-fit:cover;">
+      </div>
       <p>嵌入式爱好者，喜欢折腾 ESP32、树莓派、底层开发。开源项目、3D打印、AI绘画 OC创作。</p>
       <p>📍 China</p>
       <ul style="padding-left:1rem;">
@@ -35,7 +40,7 @@ window.onload = function(){
     document.body.prepend(drawer);
     document.body.prepend(handle);
 
-    // 关键：页面整体右移 40px，头像/内容避开左侧竖条，不会被压住
+    // 页面整体右移，避开左侧竖条
     document.body.style.paddingLeft = "40px";
 
     // 移入把手：抽屉滑出，把手隐藏
