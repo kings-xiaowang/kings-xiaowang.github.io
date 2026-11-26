@@ -10,7 +10,7 @@ baseurl: ""
 
 author:
   name: kings-xiaowang
-  bio: 擅长ESP32、树莓派底层折腾；3D打印，开源项目爱好者。
+  bio: 擅长ESP32、树莓派底层折腾；3D打印、开源项目爱好者。
   avatar: "/assets/images/avatar.png"
   location: China
   links:
@@ -23,6 +23,7 @@ author:
     - label: "GitHub"
       icon: "fab fa-fw fa-github"
       url: "https://github.com/kings-xiaowang"
+
 
 
 plugins:
