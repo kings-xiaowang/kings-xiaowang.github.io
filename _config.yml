@@ -11,7 +11,7 @@ baseurl: ""
 author:
   name: kings-xiaowang
   bio: 擅长ESP32、树莓派底层折腾；3D打印、AI绘画OC设计，开源项目爱好者。
-  avatar: # 头像后面上传后填写 /assets/avatar.png
+  avatar:
   links:
     - label: "GitHub"
       icon: "fab fa-github"
@@ -32,7 +32,6 @@ defaults:
       comments: false
       share: false
 
-# 顶部导航栏
 header_pages:
   - index.md
   - about.md
