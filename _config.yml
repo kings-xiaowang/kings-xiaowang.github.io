@@ -55,5 +55,4 @@ footer:
       url: "https://github.com/kings-xiaowang"
 custom_css: /assets/css/custom.scss
 after_footer_scripts:
-  - /assets/js/custom-script.js
   - /assets/js/sidebar-drawer.js
