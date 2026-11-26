@@ -32,7 +32,3 @@ defaults:
       comments: false
       share: false
 
-header_pages:
-  - index.md
-  - about.md
-  - projects.md
