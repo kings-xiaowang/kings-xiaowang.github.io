@@ -1,48 +1,33 @@
 ---
 ---
-
 @import "minimal-mistakes";
 
-/* 自定义深色科技风 */
 :root {
-  --primary-color: #4cc9f0;
-  --accent-color: #ff6b9d;
-  --text-color: #e6edf3;
-  --background-color: #0d1117;
+  --primary: #4cc9f0;
+  --accent: #ff78a8;
 }
 
-body {
-  background-color: var(--background-color);
-  color: var(--text-color);
+/* 标题颜色 */
+h1,h2,h3 {
+  color: var(--primary);
 }
 
+/* 超链接悬浮变色 */
 a {
-  color: var(--primary-color);
+  color: var(--primary);
 }
-
 a:hover {
-  color: var(--accent-color);
+  color: var(--accent);
 }
 
-.page-title {
-  color: var(--primary-color);
-  border-bottom: 2px solid var(--primary-color);
-  padding-bottom: 8px;
-}
-
+/* 左侧头像外发光边框 */
 .author__avatar img {
-  border: 3px solid var(--primary-color);
+  border: 2px solid var(--primary);
+  box-shadow: 0 0 8px #4cc9f060;
   border-radius: 50%;
 }
 
-.btn {
-  background-color: var(--primary-color);
-  color: #000;
-  border-radius: 6px;
-  padding: 6px 12px;
-}
-
-.btn:hover {
-  background-color: var(--accent-color);
-  color: #fff;
+/* 项目列表增加间距 */
+li {
+  margin: 0.6rem 0;
 }
