@@ -5,14 +5,14 @@ window.onload = function(){
     const handle = document.createElement('div');
     const drawer = document.createElement('div');
 
-    // 触发把手样式（内联，不依赖 CSS 文件）
+    // 左侧把手样式（和暗色页面同底色）
     handle.style.cssText = `
       position:fixed; left:0; top:0; width:40px; height:100vh;
-      background:#238636; border-right:1px solid #30363d;
+      background:#22272e; border-right:1px solid #30363d;
       z-index:1001;
     `;
 
-    // 抽屉面板样式：默认移出屏幕左侧
+    // 抽屉面板，默认藏在屏幕外
     drawer.style.cssText = `
       position:fixed; left:0; top:0; width:260px; height:100vh;
       background:#161b22; z-index:1000; padding:1rem;
@@ -34,13 +34,18 @@ window.onload = function(){
     document.body.prepend(drawer);
     document.body.prepend(handle);
 
-    // 移入把手 -> 滑出
+    // 鼠标移入把手：抽屉滑出，把手隐藏
     handle.addEventListener("mouseenter", () => {
       drawer.style.transform = "translateX(0)";
+      handle.style.opacity = "0";
+      handle.style.pointerEvents = "none";
     });
-    // 移出抽屉 -> 收回
+
+    // 鼠标离开抽屉区域：抽屉收回，把手重新显示
     drawer.addEventListener("mouseleave", () => {
       drawer.style.transform = "translateX(-100%)";
+      handle.style.opacity = "1";
+      handle.style.pointerEvents = "auto";
     });
   }
 }
