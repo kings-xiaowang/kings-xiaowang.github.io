@@ -32,3 +32,8 @@ defaults:
       comments: false
       share: false
 
+plugins:
+  - jekyll-remote-theme
+  - jekyll-include-cache
+  - jekyll-feed
+  - jekyll-seo-tag
