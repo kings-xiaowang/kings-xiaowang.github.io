@@ -1,53 +1,28 @@
 ---
 ---
 @import "minimal-mistakes";
-
-@media (min-width: 1024px) {
-  /* 包裹侧边栏的外层容器 */
-  .sidebar__wrapper {
-    position: fixed;
-    top: 0;
-    left: 0;
-    height: 100vh;
-    width: 260px;
-    transform: translateX(calc(-100% + 40px));
-    transition: transform 0.3s ease;
-    z-index: 999;
+@media (min-width:1024px){
+  .author-profile{
+    overflow:hidden;
+    width:40px;
+    transition:width .3s ease;
+    background:#161b22;
   }
-
-  .sidebar__wrapper:hover {
-    transform: translateX(0);
+  .author-profile:hover{
+    width:260px;
   }
-
-  /* 侧边栏背景 */
-  .sidebar__wrapper .author-profile {
-    width: 260px;
-    height: 100vh;
-    background: #161b22;
-    border-right: 1px solid #30363d;
-    overflow: hidden;
-    padding: 1rem;
+  .author-profile .author__avatar,
+  .author-profile .author__content,
+  .author-profile .author__urls-wrapper{
+    opacity:0;
+    transition:opacity .28s ease;
   }
-
-  /* 内部内容默认隐藏 */
-  .sidebar__wrapper .author__avatar,
-  .sidebar__wrapper .author__content,
-  .sidebar__wrapper .author__urls-wrapper {
-    opacity: 0;
-    transform: translateX(-15px);
-    transition: opacity 0.28s ease, transform 0.28s ease;
+  .author-profile:hover .author__avatar,
+  .author-profile:hover .author__content,
+  .author-profile:hover .author__urls-wrapper{
+    opacity:1;
   }
-
-  /* hover 滑入 */
-  .sidebar__wrapper:hover .author__avatar,
-  .sidebar__wrapper:hover .author__content,
-  .sidebar__wrapper:hover .author__urls-wrapper {
-    opacity: 1;
-    transform: translateX(0);
-  }
-
-  /* 主内容向右挪，留出40px触发条 */
-  .page__content {
-    margin-left: 40px;
+  .page__content{
+    margin-left:40px;
   }
 }
