@@ -2,15 +2,14 @@
 ---
 @import "minimal-mistakes";
 
-/* 仅桌面端生效，大屏 */
+/* 仅桌面大屏启用 */
 @media (min-width: 1024px) {
   .sidebar.sticky {
     position: fixed;
     top: 0;
     left: 0;
     height: 100vh;
-    /* 基础触发条宽度 1cm≈40px */
-    width: 40px;
+    width: 40px; /* 左侧常驻触发条，约1cm */
     overflow: hidden;
     background: #161b22;
     border-right: 1px solid #30363d;
@@ -24,7 +23,7 @@
     width: 260px;
   }
 
-  /* 侧边内容默认隐藏，悬浮才滑出来 */
+  /* 侧边内容默认隐藏 */
   .sidebar.sticky .author__avatar,
   .sidebar.sticky .author__content,
   .sidebar.sticky .author__urls-wrapper {
@@ -33,6 +32,7 @@
     transition: opacity 0.28s ease, transform 0.28s ease;
   }
 
+  /* 悬浮时显示内容，平滑滑入 */
   .sidebar.sticky:hover .author__avatar,
   .sidebar.sticky:hover .author__content,
   .sidebar.sticky:hover .author__urls-wrapper {
@@ -40,7 +40,7 @@
     transform: translateX(0);
   }
 
-  /* 主页面内容预留左侧 40px 的空间，不会被触发条挡住 */
+  /* 主内容区域留出40px，不被触发条遮挡 */
   .main__content {
     margin-left: 40px;
   }
