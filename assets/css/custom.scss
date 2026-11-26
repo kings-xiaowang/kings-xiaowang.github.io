@@ -2,53 +2,46 @@
 ---
 @import "minimal-mistakes";
 
-/* 桌面端：左侧竖条抽屉 */
+/* 仅桌面端生效，大屏 */
 @media (min-width: 1024px) {
-
   .sidebar.sticky {
     position: fixed;
     top: 0;
     left: 0;
     height: 100vh;
-    width: 72px;
+    /* 基础触发条宽度 1cm≈40px */
+    width: 40px;
     overflow: hidden;
     background: #161b22;
     border-right: 1px solid #30363d;
-    transition: width .28s ease;
-    z-index: 1000;
-    padding: 24px 0;
-    margin: 0;
+    transition: width 0.3s ease;
+    z-index: 999;
+    padding: 1rem 0;
   }
 
-  /* 鼠标移上去，向右展开 */
+  /* 鼠标悬浮，向右展开完整侧边栏 */
   .sidebar.sticky:hover {
     width: 260px;
   }
 
-  .author__avatar {
-    width: 48px;
-    margin: 0 auto 18px;
-  }
-
-  /* 简介和菜单默认隐藏，悬停时滑出 */
-  .author__content,
-  .author__urls-wrapper {
-    white-space: nowrap;
+  /* 侧边内容默认隐藏，悬浮才滑出来 */
+  .sidebar.sticky .author__avatar,
+  .sidebar.sticky .author__content,
+  .sidebar.sticky .author__urls-wrapper {
     opacity: 0;
-    transform: translateX(-14px);
-    transition: opacity .25s ease, transform .25s ease;
+    transform: translateX(-20px);
+    transition: opacity 0.28s ease, transform 0.28s ease;
   }
 
+  .sidebar.sticky:hover .author__avatar,
   .sidebar.sticky:hover .author__content,
   .sidebar.sticky:hover .author__urls-wrapper {
     opacity: 1;
     transform: translateX(0);
   }
 
-  /* 主内容给竖条留出位置 */
-  .page,
-  .archive,
+  /* 主页面内容预留左侧 40px 的空间，不会被触发条挡住 */
   .main__content {
-    margin-left: 72px;
+    margin-left: 40px;
   }
 }
