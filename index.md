@@ -4,7 +4,11 @@ author_profile: true
 title: "首页"
 ---
 
-# 👋 Hello，我是 kings-xiaowang
+<div style="display:flex; align-items:center; gap:12px; flex-wrap:nowrap;">
+  <h1 style="margin:0;">👋 Hello，我是 kings-xiaowang</h1>
+  <img src="/assets/images/avatar.png" alt="头像"
+       style="width:48px; height:48px; border-radius:50%; object-fit:cover; flex-shrink:0;">
+</div>
 
 嵌入式爱好者，喜欢折腾 ESP32、树莓派、底层开发。
 爱好：开源项目、3D 打印、AI 绘画 OC 创作。
