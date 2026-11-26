@@ -6,12 +6,11 @@ window.onload = function(){
     const handle = document.createElement('div');
     const drawer = document.createElement('div');
 
-    // 左侧把手：不再100vh全屏，改成垂直居中竖条，不会盖住右下角头像
+    // 左侧把手：全屏高度的竖条
     handle.style.cssText = `
-      position:fixed; left:0; top: 50%; transform: translateY(-50%);
-      width:40px; height: 180px;
+      position:fixed; left:0; top:0; width:40px; height:100vh;
       background:#22272e; border-right:1px solid #30363d;
-      z-index:1001; border-radius:0 6px 6px 0;
+      z-index:1001;
     `;
 
     // 抽屉面板
@@ -36,6 +35,9 @@ window.onload = function(){
     document.body.prepend(drawer);
     document.body.prepend(handle);
 
+    // 关键：页面整体右移 40px，头像/内容避开左侧竖条，不会被压住
+    document.body.style.paddingLeft = "40px";
+
     // 移入把手：抽屉滑出，把手隐藏
     handle.addEventListener("mouseenter", () => {
       drawer.style.transform = "translateX(0)";
@@ -43,7 +45,7 @@ window.onload = function(){
       handle.style.pointerEvents = "none";
     });
 
-    // 鼠标离开抽屉区域：抽屉收回，把手重新显示
+    // 鼠标离开抽屉：抽屉收回，把手重现
     drawer.addEventListener("mouseleave", () => {
       drawer.style.transform = "translateX(-100%)";
       handle.style.opacity = "1";
