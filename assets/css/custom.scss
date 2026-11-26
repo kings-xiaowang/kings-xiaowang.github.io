@@ -2,32 +2,53 @@
 ---
 @import "minimal-mistakes";
 
-:root {
-  --primary: #4cc9f0;
-  --accent: #ff78a8;
-}
+/* 桌面端：左侧竖条抽屉 */
+@media (min-width: 1024px) {
 
-/* 标题颜色 */
-h1,h2,h3 {
-  color: var(--primary);
-}
+  .sidebar.sticky {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    width: 72px;
+    overflow: hidden;
+    background: #161b22;
+    border-right: 1px solid #30363d;
+    transition: width .28s ease;
+    z-index: 1000;
+    padding: 24px 0;
+    margin: 0;
+  }
 
-/* 超链接悬浮变色 */
-a {
-  color: var(--primary);
-}
-a:hover {
-  color: var(--accent);
-}
+  /* 鼠标移上去，向右展开 */
+  .sidebar.sticky:hover {
+    width: 260px;
+  }
 
-/* 左侧头像外发光边框 */
-.author__avatar img {
-  border: 2px solid var(--primary);
-  box-shadow: 0 0 8px #4cc9f060;
-  border-radius: 50%;
-}
+  .author__avatar {
+    width: 48px;
+    margin: 0 auto 18px;
+  }
 
-/* 项目列表增加间距 */
-li {
-  margin: 0.6rem 0;
+  /* 简介和菜单默认隐藏，悬停时滑出 */
+  .author__content,
+  .author__urls-wrapper {
+    white-space: nowrap;
+    opacity: 0;
+    transform: translateX(-14px);
+    transition: opacity .25s ease, transform .25s ease;
+  }
+
+  .sidebar.sticky:hover .author__content,
+  .sidebar.sticky:hover .author__urls-wrapper {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  /* 主内容给竖条留出位置 */
+  .page,
+  .archive,
+  .main__content {
+    margin-left: 72px;
+  }
 }
