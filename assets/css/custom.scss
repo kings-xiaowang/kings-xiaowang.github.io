@@ -1,27 +1,37 @@
 ---
 ---
 @import "minimal-mistakes";
-@media (min-width:1024px){
-  .author-profile{
-    overflow:hidden;
+
+@media (min-width: 1024px) {
+  /* 左侧触发把手，固定在页面最左，1cm */
+  .drawer-handle{
+    position:fixed;
+    left:0;
+    top:0;
     width:40px;
-    transition:width .3s ease;
+    height:100vh;
     background:#161b22;
+    border-right:1px solid #30363d;
+    z-index: 1001;
   }
-  .author-profile:hover{
+  /* 抽屉侧边栏，默认藏在屏幕外 */
+  .slide-sidebar{
+    position:fixed;
+    top:0;
+    left:0;
     width:260px;
+    height:100vh;
+    background:#161b22;
+    z-index:1000;
+    padding:1rem;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    overflow-y:auto;
   }
-  .author-profile .author__avatar,
-  .author-profile .author__content,
-  .author-profile .author__urls-wrapper{
-    opacity:0;
-    transition:opacity .28s ease;
+  .slide-sidebar.open{
+    transform: translateX(0);
   }
-  .author-profile:hover .author__avatar,
-  .author-profile:hover .author__content,
-  .author-profile:hover .author__urls-wrapper{
-    opacity:1;
-  }
+  /* 主内容预留40px */
   .page__content{
     margin-left:40px;
   }
