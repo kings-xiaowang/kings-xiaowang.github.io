@@ -11,7 +11,8 @@ baseurl: ""
 author:
   name: kings-xiaowang
   bio: 擅长ESP32、树莓派底层折腾；3D打印、AI绘画OC设计，开源项目爱好者。
-  avatar:
+  avatar: "/assets/avatar.png"
+  location: China
   links:
     - label: "GitHub"
       icon: "fab fa-github"
@@ -19,6 +20,7 @@ author:
 
 plugins:
   - jekyll-remote-theme
+  - jekyll-include-cache
   - jekyll-feed
   - jekyll-seo-tag
 
@@ -31,9 +33,15 @@ defaults:
       read_time: false
       comments: false
       share: false
+      related: false
 
-plugins:
-  - jekyll-remote-theme
-  - jekyll-include-cache
-  - jekyll-feed
-  - jekyll-seo-tag
+header_pages:
+  - index.md
+  - about.md
+  - projects.md
+
+footer:
+  links:
+    - label: "GitHub"
+      icon: "fab fa-github"
+      url: "https://github.com/kings-xiaowang"
