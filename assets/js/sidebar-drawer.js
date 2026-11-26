@@ -1,18 +1,20 @@
 window.onload = function(){
   if(document.querySelector('.drawer-handle')) return;
 
+  // 只在桌面大屏启用
   if(window.innerWidth >= 1024){
     const handle = document.createElement('div');
     const drawer = document.createElement('div');
 
-    // 左侧把手样式（和暗色页面同底色）
+    // 左侧把手：不再100vh全屏，改成垂直居中竖条，不会盖住右下角头像
     handle.style.cssText = `
-      position:fixed; left:0; top:0; width:40px; height:100vh;
+      position:fixed; left:0; top: 50%; transform: translateY(-50%);
+      width:40px; height: 180px;
       background:#22272e; border-right:1px solid #30363d;
-      z-index:1001;
+      z-index:1001; border-radius:0 6px 6px 0;
     `;
 
-    // 抽屉面板，默认藏在屏幕外
+    // 抽屉面板
     drawer.style.cssText = `
       position:fixed; left:0; top:0; width:260px; height:100vh;
       background:#161b22; z-index:1000; padding:1rem;
@@ -34,7 +36,7 @@ window.onload = function(){
     document.body.prepend(drawer);
     document.body.prepend(handle);
 
-    // 鼠标移入把手：抽屉滑出，把手隐藏
+    // 移入把手：抽屉滑出，把手隐藏
     handle.addEventListener("mouseenter", () => {
       drawer.style.transform = "translateX(0)";
       handle.style.opacity = "0";
