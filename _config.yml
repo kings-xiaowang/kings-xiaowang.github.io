@@ -1,0 +1,39 @@
+remote_theme: mmistakes/minimal-mistakes
+minimal_mistakes_skin: "dark"
+
+title: kings-xiaowang
+name: kings-xiaowang
+description: 嵌入式 / 开源爱好者 | Furry OC创作者
+locale: "zh-CN"
+url: "https://kings-xiaowang.github.io"
+baseurl: ""
+
+author:
+  name: kings-xiaowang
+  bio: 擅长ESP32、树莓派底层折腾；3D打印、AI绘画OC设计，开源项目爱好者。
+  avatar: # 头像后面上传后填写 /assets/avatar.png
+  links:
+    - label: "GitHub"
+      icon: "fab fa-github"
+      url: "https://github.com/kings-xiaowang"
+
+plugins:
+  - jekyll-remote-theme
+  - jekyll-feed
+  - jekyll-seo-tag
+
+defaults:
+  - scope:
+      path: ""
+    values:
+      layout: single
+      author_profile: true
+      read_time: false
+      comments: false
+      share: false
+
+# 顶部导航栏
+header_pages:
+  - index.md
+  - about.md
+  - projects.md
