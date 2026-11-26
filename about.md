@@ -13,7 +13,7 @@ author_profile: true
 - ESP32、Arduino、树莓派项目开发
 - 硬件 DIY 和原型验证
 - 3D打印模型设计与调试
-- Furry OC 角色设计与 AI 绘画创作
+- Furry
 
 ## 我的关键词
 
